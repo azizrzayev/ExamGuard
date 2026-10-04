@@ -6,10 +6,28 @@ class ExamForm(forms.ModelForm):
         model = Exam
         fields = ['title', 'description', 'duration_minutes', 'max_warnings']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İmtahan adı'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'İmtahan haqqında ətraflı...'}),
-            'duration_minutes': forms.NumberInput(attrs={'class': 'form-control'}),
-            'max_warnings': forms.NumberInput(attrs={'class': 'form-control'}),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'İmtahan adı',
+                'required': 'required'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'İmtahan haqqında ətraflı...'
+            }),
+            'duration_minutes': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Məsələn: 60',
+                'min': '1',
+                'required': 'required'
+            }),
+            'max_warnings': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Məsələn: 3',
+                'min': '0',
+                'required': 'required'
+            }),
         }
 
     def clean_duration_minutes(self):
