@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tələbə Paneli — ExamGuard</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'iconExamGuard.jpeg' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .navbar-custom {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .card-custom {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            background: #ffffff;
+        }
+        .card-header-student {
+            border-top-left-radius: 15px !important;
+            border-top-right-radius: 15px !important;
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+        }
+        .btn-start {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            color: white;
+            font-weight: bold;
+        }
+        .btn-start:hover {
+            color: white;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h1 fw-bold">ExamGuard — Tələbə Paneli</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white">Xoş gəldiniz, <strong>{{ request.user.username }}</strong>!</span>
+                <form action="{% url 'logout' %}" method="post" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-light">Çıxış et</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card card-custom">
+                    <div class="card-header card-header-student py-3">
+                        <h5 class="card-title mb-0 fw-bold">✍️ Mövcud İmtahanlar</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if exams %}
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for exam in exams %}
+                                    <div class="col">
+                                        <div class="card h-100 border shadow-sm rounded-3">
+                                            <div class="card-body">
+                                                <h5 class="card-title fw-bold text-dark">{{ exam.title }}</h5>
+                                                <p class="card-text text-muted small">
+                                                    {{ exam.description|default:"Açıqlama daxil edilməyib." }}
+                                                </p>
+                                                <div class="mb-3">
+                                                    <span class="badge bg-primary rounded-pill">{{ exam.duration_minutes }} dəqiqə</span>
+                                                    <span class="badge bg-warning text-dark rounded-pill">Max xəbərdarlıq: {{ exam.max_warnings }}</span>
+                                                </div>
+                                                <a href="#" class="btn btn-start w-100 py-2">İmtahana Başla</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <p class="text-muted mb-0">Hazırda aktiv olan heç bir imtahan yoxdur.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

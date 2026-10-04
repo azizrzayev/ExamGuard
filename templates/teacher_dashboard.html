@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müəllim Paneli — ExamGuard</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .navbar-custom {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .card-custom {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            background: #ffffff;
+        }
+        .card-header-custom {
+            border-top-left-radius: 15px !important;
+            border-top-right-radius: 15px !important;
+            background: linear-gradient(45deg, #4e54c8, #8f94fb);
+            color: white;
+        }
+        .card-header-list {
+            border-top-left-radius: 15px !important;
+            border-top-right-radius: 15px !important;
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+        }
+        .btn-gradient {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h1 fw-bold">ExamGuard — Müəllim Paneli</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white">Xoş gəldiniz, <strong>{{ request.user.username }}</strong>!</span>
+                <form action="{% url 'logout' %}" method="post" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-light">Çıxış et</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row">
+            <!-- İmtahan Yaratma Formu -->
+            <div class="col-md-5 mb-4">
+                <div class="card card-custom">
+                    <div class="card-header card-header-custom py-3">
+                        <h5 class="card-title mb-0 fw-bold">✨ Yeni İmtahan Yarat</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">İmtahan adı:</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Açıqlama:</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Müddət (dəqiqə):</label>
+                                {{ form.duration_minutes }}
+                                {% if form.duration_minutes.errors %}
+                                    <div class="text-danger small mt-1">{{ form.duration_minutes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Maksimum xəbərdarlıq limiti:</label>
+                                {{ form.max_warnings }}
+                                {% if form.max_warnings.errors %}
+                                    <div class="text-danger small mt-1">{{ form.max_warnings.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-gradient w-100 py-2">İmtahanı Saxla</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yaratılan İmtahanlar Siyahısı -->
+            <div class="col-md-7">
+                <div class="card card-custom">
+                    <div class="card-header card-header-list py-3">
+                        <h5 class="card-title mb-0 fw-bold">📚 Yaratdığınız İmtahanlar</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if exams %}
+                            <div class="list-group">
+                                {% for exam in exams %}
+                                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-2 rounded border-0 shadow-sm">
+                                        <div>
+                                            <h6 class="mb-1 fw-bold text-dark">{{ exam.title }}</h6>
+                                            <small class="text-muted">{{ exam.description|default:"Açıqlama daxil edilməyib" }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary rounded-pill">{{ exam.duration_minutes }} dəq</span>
+                                            <span class="badge bg-warning text-dark rounded-pill">Max limit: {{ exam.max_warnings }}</span>
+                                            
+                                            <!-- Silmə düyməsi -->
+                                            <form action="{% url 'delete_exam' exam.id %}" method="post" onsubmit="return confirm('Bu imtahanı silməyə əminsiniz?');" class="m-0">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Hələ heç bir imtahan yaradılmayıb.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
