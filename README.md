@@ -1,35 +1,22 @@
 # ExamGuard - AI Powered Exam System
 
-ExamGuard PDF materiallardan avtomatik imtahan suallari cixaran ve telebelerin biliyini yoxlayan agilli sistemdir.
+ExamGuard PDF materiallardan və əl ilə daxil edilən məlumatlardan avtomatik imtahan sualları çıxaran və proctoring (distant nəzarət) imkanı sunan Django tətbiqidir.
 
 ## 🚀 Features
-- 📄 PDF-den avtomatik quiz generation (Gemini AI - Free)
-- 🧊 Liquid Glass modern UI
-- 🛡️ Anti-cheat exam mode
-- 📊 Real-time result analysis
-- 🔒 Secure authentication
+- 📄 PDF-dən avtomatik sual çıxarma
+- ✍️ Əl ilə sual idarəetməsi (Manual Question Ingestion)
+- 🛡️ Anti-cheat imtahan rejimi (Proctoring)
+- 📊 Dashboard (Teacher / Student)
+- 🔒 Rol əsaslı Django Auth sistemi
 
 ## 🛠️ Tech Stack
-- **Frontend:** Next.js 14, React, Tailwind CSS
-- **AI:** Google Gemini API (Free tier)
-- **Backend:** Supabase
-- **Deployment:** Vercel
+- **Backend:** Django, Python
+- **Frontend:** HTML5, CSS3, JavaScript, Responsive UI
+- **DB:** SQLite
+- **AI:** Google Gemini API
 
-## ⚙️ Qurasdirma
-\`\`\`bash
-git clone https://github.com/azizrzayev/ExamGuard.git
-cd ExamGuard
-npm install
-npm run dev
-\`\`\`
-
-## 🔑 Environment Variables
-\`.env.local\` fayli yarat ve elave et:
-\`\`\`
-GEMINI_API_KEY=your_gemini_key
-NEXT_PUBLIC_SUPABASE_URL=your_url
-NEXT_PUBLIC_SUPABASE_KEY=your_key
-\`\`\`
-
-## 👨‍💻 Author
-Aziz Rzayev - Baku 2026
+## ⚙️ Quraşdırma
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
