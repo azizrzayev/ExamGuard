@@ -8,6 +8,9 @@ class Exam(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'teacher'})
     duration_minutes = models.IntegerField(default=60, verbose_name="Müddət (dəqiqə)")
     max_warnings = models.IntegerField(default=3, verbose_name="Maksimum xəbərdarlıq limiti")
+    questions_per_student = models.PositiveIntegerField(default=10, verbose_name="Hər tələbəyə düşən sual sayı")
+    start_time = models.DateTimeField(null=True, blank=True, verbose_name="Başlama vaxtı")
+    groups = models.ManyToManyField('core.Group', related_name='exams', blank=True, verbose_name="Qruplar")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

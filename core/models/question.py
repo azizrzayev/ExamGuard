@@ -13,7 +13,7 @@ class Question(models.Model):
     points = models.FloatField(default=1.0, verbose_name="Sualın maks balı")
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='test')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='questions')
-    
+    exam = models.ForeignKey('core.Exam', on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
   
     option_a = models.CharField(max_length=255, blank=True, null=True)
     option_b = models.CharField(max_length=255, blank=True, null=True)

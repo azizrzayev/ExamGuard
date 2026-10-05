@@ -1,7 +1,5 @@
 from django import forms
-from core.models import Question, Exam
-from core.patterns.factory import QuestionFactory
-
+from core.models import Question, Exam, Group
 
 class ExamForm(forms.ModelForm):
     class Meta:
@@ -10,6 +8,8 @@ class ExamForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'duration_minutes':forms.NumberInput(attrs={'class': 'form-control'}),
+            'max_warnings':forms.NumberInput(attrs={'class': 'form-control'}),
         }
     def clean_duration_minutes(self):
         duration = self.cleaned_data.get('duration_minutes')
@@ -39,16 +39,10 @@ class QuestionForm(forms.ModelForm):
             'correct_option': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'A, B, C və ya D'}),
         }
 
-    def save(self, commit=True):
-        data = self.cleaned_data
-        question = QuestionFactory.create_question(
-            question_type=data.get('question_type'),
-            text=data.get('text'),
-            points=data.get('points'),
-            correct_option=data.get('correct_option'),
-            option_a=data.get('option_a'),
-            option_b=data.get('option_b'),
-            option_c=data.get('option_c'),
-            option_d=data.get('option_d'),
-        )
-        return question
+class GroupForm(forms.ModelForm):
+    class Meta:
+        model = Group
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Məs: 2445a'}),
+        }

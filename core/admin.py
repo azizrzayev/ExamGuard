@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models.user import User
 from .models.question import Question
 from .models.exam import Exam, Ticket
+from .models import Group, Exam 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -28,3 +29,6 @@ class ExamAdmin(admin.ModelAdmin):
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = ('name', 'exam')
+
+
+admin.site.register(Group)
