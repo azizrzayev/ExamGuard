@@ -144,8 +144,9 @@
                     <div class="glass-header-teacher py-3 px-4">
                         <h5 class="card-title mb-0 fw-bold text-white">➕ Yeni İmtahan Yarat</h5>
                     </div>
+
                     <div class="p-4">
-                        <form method="post" action="{% url 'teacher_dashboard' %}" novalidate>
+                        <form method="post" action="{% url 'teacher_dashboard' %}" enctype="multipart/form-data" novalidate>
                             {% csrf_token %}
                             
                             {% if exam_form.non_field_errors %}
@@ -218,7 +219,14 @@
         <div class="text-danger small mt-1">{% for error in exam_form.groups.errors %}{{ error }}{% endfor %}</div>
     {% endif %}
 </div>
+                            <div class="mb-3">
+    <label>Sual PDF-i</label>
+    <input type="file" name="pdf_file" accept=".pdf" required>
 
+    {% for error in pdf_form.pdf_file.errors %}
+        <div class="text-danger small mt-1">{{ error }}</div>
+    {% endfor %}
+</div>
                             <button type="submit" class="btn btn-glass-gradient w-100 py-2.5 mt-2">İmtahanı Yarat</button>
                         </form>
                     </div>

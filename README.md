@@ -23,7 +23,7 @@
 | Sual hovuzu, qruplar, başlama vaxtı (verilənlər bazası) | Hazırdır |
 | Müəllim paneli: qrup yaratma, tələbə hesabları | Hazırdır |
 | Qrup üzrə imtahan təyinatı və tələbə paneli | Hazırdır |
-| PDF-dən sual yükləmə (önizləmə və təsdiq ilə) | Planlaşdırılıb |
+| PDF-dən sual yükləmə (önizləmə və təsdiq ilə) | İnkişafdadır |
 | Tələbənin imtahan verməsi, server vaxtına görə taymer | Planlaşdırılıb |
 | Tab dəyişməsinin izlənməsi, xəbərdarlıq sayğacı | Planlaşdırılıb |
 | Proqramlaşdırma sualları (kod redaktoru, testlər, qismən bal) | Planlaşdırılıb |

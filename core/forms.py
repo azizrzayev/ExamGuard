@@ -1,5 +1,6 @@
 from django import forms
 from core.models import Question, Exam, Group
+from django.core.exceptions import ValidationError
 
 class ExamForm(forms.ModelForm):
     class Meta:
@@ -63,3 +64,17 @@ class GroupForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Məs: 2445a'}),
         }
+
+class PDFUploadForm(forms.Form):
+    pdf_file = forms.FileField(label="Sual PDF-i")
+
+    def clean_pdf_file(self):
+        file = self.cleaned_data["pdf_file"]
+
+        if not file.name.lower().endswith(".pdf"):
+            raise ValidationError("Yalnız PDF faylı yükləmək olar.")
+
+        if file.size > 10 * 1024 * 1024:
+            raise ValidationError("PDF faylı 10 MB-dan böyük olmamalıdır.")
+
+        return file
