@@ -21,8 +21,8 @@
 | Müəllim paneli: imtahan yaratma və silmə | Hazırdır |
 | Sual modeli (test, yazılı, proqramlaşdırma) və yoxlama qaydaları | Hazırdır |
 | Sual hovuzu, qruplar, başlama vaxtı (verilənlər bazası) | Hazırdır |
-| Müəllim paneli: qrup yaratma, tələbə hesabları | İnkişafdadır |
-| Qrup üzrə imtahan təyinatı və tələbə paneli | İnkişafdadır |
+| Müəllim paneli: qrup yaratma, tələbə hesabları | Hazırdır |
+| Qrup üzrə imtahan təyinatı və tələbə paneli | Hazırdır |
 | PDF-dən sual yükləmə (önizləmə və təsdiq ilə) | Planlaşdırılıb |
 | Tələbənin imtahan verməsi, server vaxtına görə taymer | Planlaşdırılıb |
 | Tab dəyişməsinin izlənməsi, xəbərdarlıq sayğacı | Planlaşdırılıb |
