@@ -11,7 +11,8 @@ class ExamForm(forms.ModelForm):
             'max_warnings', 
             'questions_per_student', 
             'start_time', 
-            'groups'
+            'groups',
+            'exam_type'
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İmtahan Adı'}),
@@ -21,6 +22,7 @@ class ExamForm(forms.ModelForm):
             'questions_per_student': forms.NumberInput(attrs={'class': 'form-control'}),
             'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'groups': forms.CheckboxSelectMultiple(),
+            'exam_type': forms.Select(attrs={'class': 'form-select'}),
         }
     def __init__(self, *args, teacher=None, **kwargs):
         super().__init__(*args, **kwargs)

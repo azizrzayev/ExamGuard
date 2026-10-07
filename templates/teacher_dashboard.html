@@ -163,6 +163,14 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label fw-semibold text-white-50 small">İmtahan növü</label>
+                                {{ exam_form.exam_type }}
+                                {% if exam_form.exam_type.errors %}
+                                <div class="text-danger small mt-1">{% for error in exam_form.exam_type.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold text-white-50 small">Açıqlama</label>
                                 {{ exam_form.description }}
                                 {% if exam_form.description.errors %}
@@ -244,6 +252,11 @@
                                                 <button class="btn btn-sm btn-outline-light rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addQuestionModal{{ exam.id }}">
                                                     Sual Əlavə Et
                                                 </button>
+                                            <form action="{% url 'delete_exam' exam.id %}" method="post" class="d-inline"
+                                                 onsubmit="return confirm('«{{ exam.title }}» imtahanı silinsin? Bu imtahanın sualları da silinəcək.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-1">Sil</button>
+                                            </form>
                                             </td>
                                         </tr>
 

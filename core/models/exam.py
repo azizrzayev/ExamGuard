@@ -3,7 +3,17 @@ from django.conf import settings
 from .question import Question
 
 class Exam(models.Model):
+    EXAM_TYPES = [
+        ('test', 'Test'),
+        ('written', 'Yazılı'),
+    ]
     title = models.CharField(max_length=200, verbose_name="İmtahan adı")
+    exam_type = models.CharField(
+        max_length=10,
+        choices=EXAM_TYPES,
+        default='test',
+        verbose_name="İmtahan növü"
+    )
     description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'teacher'})
     duration_minutes = models.IntegerField(default=60, verbose_name="Müddət (dəqiqə)")
