@@ -116,9 +116,10 @@
             <span class="navbar-brand mb-0 h1 fw-bold text-white" style="letter-spacing: 0.5px;">ExamGuard — Müəllim Paneli</span>
             <div class="d-flex align-items-center gap-3">
                 <span class="text-white-50">Hörmətli müəllim, <strong class="text-white">{{ request.user.username }}</strong></span>
+                <a href="{% url 'teacher_groups' %}" class="btn btn-sm btn-outline-light rounded-pill px-3">Qruplar</a>
                 <form action="{% url 'logout' %}" method="post" class="m-0">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">Çıxış et</button>
+                    <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">Çıxış et</button> 
                 </form>
             </div>
         </div>
@@ -186,6 +187,29 @@
                                     {% endif %}
                                 </div>
                             </div>
+                            <div class="mb-3">
+    <label class="form-label fw-semibold text-white-50 small">Hər tələbəyə düşən sual sayı</label>
+    {{ exam_form.questions_per_student }}
+    {% if exam_form.questions_per_student.errors %}
+        <div class="text-danger small mt-1">{% for error in exam_form.questions_per_student.errors %}{{ error }}{% endfor %}</div>
+    {% endif %}
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-semibold text-white-50 small">Başlama vaxtı</label>
+    {{ exam_form.start_time }}
+    {% if exam_form.start_time.errors %}
+        <div class="text-danger small mt-1">{% for error in exam_form.start_time.errors %}{{ error }}{% endfor %}</div>
+    {% endif %}
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-semibold text-white-50 small">Qruplar</label>
+    <div class="text-white">{{ exam_form.groups }}</div>
+    {% if exam_form.groups.errors %}
+        <div class="text-danger small mt-1">{% for error in exam_form.groups.errors %}{{ error }}{% endfor %}</div>
+    {% endif %}
+</div>
 
                             <button type="submit" class="btn btn-glass-gradient w-100 py-2.5 mt-2">İmtahanı Yarat</button>
                         </form>

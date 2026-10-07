@@ -17,7 +17,8 @@ urlpatterns = [
     path('student/', views.student_dashboard, name='student_dashboard'),
 
     # İmtahan əməliyyatları 
-    path('teacher/exam/create/', views.teacher_dashboard, name='create_exam'), # veya views.create_exam
+    path('teacher/exam/create/', views.teacher_dashboard, name='create_exam'), 
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),
+    path('teacher/groups/', views.teacher_groups, name='teacher_groups'),
 ]

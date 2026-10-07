@@ -4,13 +4,28 @@ from core.models import Question, Exam, Group
 class ExamForm(forms.ModelForm):
     class Meta:
         model = Exam
-        fields = ['title', 'description', 'duration_minutes', 'max_warnings']
+        fields = [
+            'title', 
+            'description', 
+            'duration_minutes', 
+            'max_warnings', 
+            'questions_per_student', 
+            'start_time', 
+            'groups'
+        ]
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'duration_minutes':forms.NumberInput(attrs={'class': 'form-control'}),
-            'max_warnings':forms.NumberInput(attrs={'class': 'form-control'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İmtahan Adı'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Açıqlama'}),
+            'duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Müddət (dəqiqə)'}),
+            'max_warnings': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Maksimum xəbərdarlıq sayı'}),
+            'questions_per_student': forms.NumberInput(attrs={'class': 'form-control'}),
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'groups': forms.CheckboxSelectMultiple(),
         }
+    def __init__(self, *args, teacher=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if teacher:
+            self.fields['groups'].queryset = Group.objects.filter(teacher=teacher)
     def clean_duration_minutes(self):
         duration = self.cleaned_data.get('duration_minutes')
         if duration is not None and duration <= 0:

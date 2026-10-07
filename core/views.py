@@ -15,19 +15,20 @@ def teacher_dashboard(request):
         return redirect('student_dashboard')
 
     if request.method == 'POST':
-        form = ExamForm(request.POST)
+        form = ExamForm(request.POST, teacher=request.user)
         if form.is_valid():
             exam = form.save(commit=False)
             exam.created_by = request.user
             exam.save()
-            return redirect('teacher_dashboard')  
+            form.save_m2m()  
+            return redirect('teacher_dashboard')
     else:
-        form = ExamForm()
+        form = ExamForm(teacher=request.user)
 
     exams = Exam.objects.filter(created_by=request.user)
     return render(request, 'teacher_dashboard.html', {
         'exam_form': form,
-        'exams': exams
+        'exams': exams,
     })
 @login_required
 def teacher_groups(request):
@@ -51,10 +52,14 @@ def teacher_groups(request):
     })
 @login_required
 def student_dashboard(request):
-    return render(request, 'student_dashboard.html')
+    if request.user.is_teacher():
+        return redirect('teacher_dashboard')
 
+    exams = Exam.objects.filter(groups__students=request.user).distinct()
 
-
+    return render(request, 'student_dashboard.html', {
+        'exams': exams,
+    })
 @login_required
 def delete_exam_view(request, exam_id):
     exam = get_object_or_404(Exam, id=exam_id, created_by=request.user)
