@@ -4,9 +4,12 @@ from django.contrib.auth.decorators import login_required
 from core.forms import GroupForm, ExamForm, PDFUploadForm
 from core.models.exam import Exam
 from pypdf import PdfReader
+from core.models.result import ExamResult
 from core.services.pdf_import import parse_test_questions
 from core.models.question import Question
 from django.db import transaction
+from core.models import Answer
+
 @login_required
 def dashboard_view(request):
     if request.user.is_teacher():
@@ -89,6 +92,13 @@ def student_dashboard(request):
 
     exams = Exam.objects.filter(groups__students=request.user).distinct()
 
+    results = {
+        r.exam_id: r
+        for r in ExamResult.objects.filter(student=request.user)
+    }
+    for exam in exams:
+        exam.result = results.get(exam.id)
+
     return render(request, 'student_dashboard.html', {
         'exams': exams,
     })
@@ -163,18 +173,49 @@ def upload_exam_pdf(request, exam_id):
     )
 @login_required
 def start_exam_view(request, exam_id):
+
     if request.user.is_teacher():
         return redirect('teacher_dashboard')
 
-    exam = get_object_or_404(
-        Exam,
-        id=exam_id,
-        groups__students=request.user,
+    exam = get_object_or_404(Exam, id=exam_id, groups__students=request.user)
+
+    if ExamResult.objects.filter(student=request.user, exam=exam).exists():
+        return redirect('student_dashboard')
+
+    questions = exam.questions.order_by('id')[: exam.questions_per_student]
+
+    if request.method == 'POST':
+        for q in questions:
+            selected_option = request.POST.get(f'question_{q.id}')
+            if not selected_option:
+                continue
+
+            Answer.objects.update_or_create(
+                student=request.user,
+                question=q,
+                defaults={'selected_option': selected_option},
+            )
+
+        student_answers = Answer.objects.filter(
+            student=request.user, question__exam=exam
+        )
+
+        score = len([ans for ans in student_answers if ans.is_correct()])
+        total = len(questions)
+
+        ExamResult.objects.update_or_create(
+            student=request.user,
+            exam=exam,
+            defaults={'score': score, 'total': total},
+        )
+
+        return redirect('student_dashboard')
+
+    return render(
+        request,
+        'take_exam.html',
+        {
+            'exam': exam,
+            'questions': questions,
+        },
     )
-
-    questions = exam.questions.order_by('id')[:exam.questions_per_student]
-
-    return render(request, 'take_exam.html', {
-        'exam': exam,
-        'questions': questions,
-    })

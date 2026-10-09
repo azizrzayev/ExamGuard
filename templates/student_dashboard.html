@@ -129,7 +129,16 @@
                                                     </span>
                                                 </div>
                                             </div>
-                                            <a href="{% url 'start_exam' exam.id %}" class="btn btn-glass-gradient w-100 py-2">İmtahana Başla</a>
+                                            {% if exam.result %}
+                                                <span class="badge bg-success fs-6">
+                                                    Nəticə: {{ exam.result.score }} / {{ exam.result.total }}
+                                                </span>
+                                            {% else %}
+                                                <a href="{% url 'start_exam' exam.id %}" class="btn-glass-gradient w-100 py-2">
+                                                    İmtahana Başla
+                                                </a>
+                                            {% endif %}
+                                   
                                         </div>
                                     </div>
                                 {% endfor %}

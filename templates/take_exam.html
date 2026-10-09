@@ -152,7 +152,9 @@
             </div>
         </section>
 
-        <form id="examForm" data-total-questions="{{ questions|length }}">
+        <form id="examForm" method="post" data-total-questions="{{ questions|length }}">
+            
+            {% csrf_token %}
             {% for question in questions %}
                 <section class="glass-card p-4 mb-4 question-card">
                     <div class="d-flex gap-3 align-items-start">
@@ -191,8 +193,7 @@
 
             {% if questions %}
                 <div class="d-flex justify-content-end">
-                    <button type="button" class="finish-button"
-                            onclick="alert('Növbəti addımda cavabları yoxlama və nəticə hissəsini qoşacağıq.')">
+                    <button type="submit" class="finish-button">
                         İmtahanı Bitir
                     </button>
                 </div>
@@ -201,7 +202,7 @@
     </main>
 
     <script>
-        const totalQuestions = {{ questions|length }};
+        const totalQuestions = document.getElementById('examForm').getAttribute('data-total-questions');
         const durationMinutes = Number('{{ exam.duration_minutes }}') || 60;
         let secondsLeft = durationMinutes * 60;
 
