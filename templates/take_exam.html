@@ -240,7 +240,7 @@
     </script>
         
         <script>
-        let left = {{ remaining_seconds }};
+        let left = Number("{{ remaining_seconds }}");
         const timerEl = document.getElementById('timer');
         const form = document.getElementById('examForm');
 

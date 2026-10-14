@@ -21,7 +21,8 @@ urlpatterns = [
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),
     path('teacher/groups/', views.teacher_groups, name='teacher_groups'),
-    path(
-    'teacher/exam/<int:exam_id>/upload-pdf/', views.upload_exam_pdf, name='upload_exam_pdf'),
+    path('teacher/exam/<int:exam_id>/upload-pdf/', views.upload_exam_pdf, name='upload_exam_pdf'),
     path('student/exam/<int:exam_id>/', views.start_exam_view, name='start_exam'),
+    path('teacher/exams/new/', views.create_exam_view, name='create_exam'),
+    path('teacher/exams/<int:exam_id>/results/', views.exam_results_view, name='exam_results'),
 ]
