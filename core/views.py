@@ -5,19 +5,24 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from pypdf import PdfReader
-
 from core.forms import GroupForm, ExamForm, PDFUploadForm
 from core.models import Group, ExamSession, Answer
 from core.models.exam import Exam
 from core.models.question import Question
 from core.models.result import ExamResult
 from core.services.pdf_import import parse_test_questions
+from django.contrib.auth import get_user_model
+from core.models import Institution
+
 
 
 @login_required
 def dashboard_view(request):
     if request.user.is_teacher():
         return redirect('teacher_dashboard')
+    
+    if request.user.is_superadmin():
+        return redirect('superadmin_dashboard')
     return redirect('student_dashboard')
 
 
@@ -29,6 +34,25 @@ def teacher_dashboard(request):
     exams = Exam.objects.filter(created_by=request.user).order_by('-created_at')
     return render(request, 'teacher_dashboard.html', {'exams': exams})
 
+User = get_user_model()
+
+@login_required
+def superadmin_dashboard(request):
+
+    if not request.user.is_superadmin():
+        return redirect('dashboard')
+
+    institutions = Institution.objects.all()
+
+    context = {
+        'institutions': institutions,
+        'institution_count': institutions.count(),
+        'admin_count': User.objects.filter(role='admin').count(),
+        'teacher_count': User.objects.filter(role='teacher').count(),
+        'student_count': User.objects.filter(role='student').count(),
+    }
+
+    return render(request, 'superadmin_dashboard.html', context)
 
 @login_required
 def create_exam_view(request):

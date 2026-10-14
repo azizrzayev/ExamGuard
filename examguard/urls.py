@@ -11,13 +11,13 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     # Paneller
-    path('', views.teacher_dashboard, name='dashboard'),
-    path('home/', views.teacher_dashboard, name='home'),
+    path('', views.dashboard_view, name='dashboard'),
+    path('home/', views.dashboard_view, name='home'),
     path('teacher/', views.teacher_dashboard, name='teacher_dashboard'),
     path('student/', views.student_dashboard, name='student_dashboard'),
+    path('superadmin/', views.superadmin_dashboard, name='superadmin_dashboard'),
 
-    # İmtahan əməliyyatları 
-    path('teacher/exam/create/', views.teacher_dashboard, name='create_exam'), 
+    # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),
     path('teacher/groups/', views.teacher_groups, name='teacher_groups'),

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamGuard · Superadmin</title>
+<style>
+:root{
+    --ink:#1d2b27; --muted:#6b7a74; --paper:#f3efe6; --card:#fffdf8;
+    --line:#e6dfd0; --side:#10241f; --side2:#17332c; --amber:#e8b04b;
+    --amber-d:#c98f2c; --green:#2f8f6b; --red:#c8553d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);display:flex;min-height:100vh}
+
+aside{width:250px;background:var(--side);color:#cfe0d9;padding:26px 18px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;color:#fff;margin-bottom:6px}
+.brand i{width:34px;height:34px;border-radius:10px;background:var(--amber);color:var(--side);display:grid;place-items:center;font-style:normal;font-weight:800}
+.role{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin:0 0 30px 44px}
+nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;color:#b6cbc2;text-decoration:none;margin-bottom:4px;font-size:.95rem;transition:.2s}
+nav a:hover{background:var(--side2);color:#fff}
+nav a.on{background:var(--amber);color:var(--side);font-weight:700}
+.me{margin-top:auto;padding-top:18px;border-top:1px solid #234a40;font-size:.85rem}
+.me b{display:block;color:#fff}
+.me .out{background:none;border:0;padding:0;cursor:pointer;color:var(--amber);font-size:.82rem;margin-top:4px}
+
+main{flex:1;padding:34px 40px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+h1{font-size:1.7rem;letter-spacing:-.02em}
+.sub{color:var(--muted);margin-top:4px;font-size:.95rem}
+.btn{background:var(--ink);color:#fff;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer;font-size:.92rem;transition:.2s;text-decoration:none;display:inline-block}
+.btn:hover{background:var(--amber-d)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:26px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.stat small{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
+.stat strong{display:block;font-size:2rem;margin-top:8px;letter-spacing:-.03em}
+.stat.hot{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stat.hot small{color:#9fb8ae}.stat.hot strong{color:var(--amber)}
+
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px}
+.panel h2{font-size:1.05rem;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.search{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font-size:.85rem;width:180px}
+
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;padding:0 10px 10px}
+td{padding:13px 10px;border-top:1px solid var(--line)}
+tr:hover td{background:#faf6ec}
+.name{font-weight:600}
+
+@media(max-width:800px){
+    body{flex-direction:column}
+    aside{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
+    .role{margin:0}.me{display:none}
+    main{padding:22px 16px}
+}
+</style>
+</head>
+<body>
+
+<aside>
+    <div class="brand"><i>E</i> ExamGuard</div>
+    <div class="role">Superadmin</div>
+    <nav>
+        <a class="on" href="{% url 'superadmin_dashboard' %}">◧ İdarə paneli</a>
+    </nav>
+    <div class="me">
+        <b>{{ request.user.username }}</b>Superadmin
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="out">Çıxış et</button>
+        </form>
+    </div>
+</aside>
+
+<main>
+    <div class="top">
+        <div>
+            <h1>Xoş gəldin, {{ request.user.username }}</h1>
+            <p class="sub">Bütün müəssisələrin ümumi vəziyyəti bir baxışda.</p>
+        </div>
+    </div>
+
+    <section class="stats">
+        <div class="stat hot"><small>Müəssisələr</small><strong>{{ institution_count }}</strong></div>
+        <div class="stat"><small>Adminlər</small><strong>{{ admin_count }}</strong></div>
+        <div class="stat"><small>Müəllimlər</small><strong>{{ teacher_count }}</strong></div>
+        <div class="stat"><small>Tələbələr</small><strong>{{ student_count }}</strong></div>
+    </section>
+
+    <section class="grid">
+        <div class="panel">
+            <h2>Müəssisələr <input class="search" id="q" placeholder="Axtar..."></h2>
+            <table>
+                <thead><tr><th>Müəssisə</th><th>Yaradılma tarixi</th></tr></thead>
+                <tbody id="rows">
+                    {% for inst in institutions %}
+                    <tr>
+                        <td class="name">{{ inst.name }}</td>
+                        <td>{{ inst.created_at|date:"d.m.Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2">Hələ müəssisə yoxdur.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h2>Son hadisələr</h2>
+            <p class="sub">Hadisə jurnalı tezliklə əlavə olunacaq.</p>
+        </div>
+    </section>
+</main>
+
+<script>
+document.getElementById('q').addEventListener('input', function () {
+    const t = this.value.toLowerCase();
+    document.querySelectorAll('#rows tr').forEach(r => {
+        r.style.display = r.textContent.toLowerCase().includes(t) ? '' : 'none';
+    });
+});
+</script>
+</body>
+</html>
