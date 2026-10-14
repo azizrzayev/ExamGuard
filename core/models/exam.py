@@ -25,12 +25,21 @@ class Exam(models.Model):
     groups = models.ManyToManyField('core.Group', related_name='exams', blank=True, verbose_name="Qruplar")
     created_at = models.DateTimeField(auto_now_add=True)
     allow_reentry = models.BooleanField(default=True, verbose_name="Təkrar girişə icazə")
-    def is_open(self):
+    def is_open(self, grace_seconds=0):
         if not self.start_time:
             return True
         now = timezone.now()
-        end_time = self.start_time + timedelta(minutes=self.duration_minutes)
+        end_time = self.start_time + timedelta(
+            minutes=self.duration_minutes, seconds=grace_seconds
+    )
         return self.start_time <= now < end_time
+
+    def remaining_seconds(self):
+        if not self.start_time:
+            return self.duration_minutes * 60
+        end_time = self.start_time + timedelta(minutes=self.duration_minutes)
+        return max(0, int((end_time - timezone.now()).total_seconds()))
+
     def has_ended(self):
         if not self.start_time:
             return False

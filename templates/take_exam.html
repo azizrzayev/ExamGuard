@@ -203,7 +203,6 @@
 
     <script>
         const totalQuestions = document.getElementById('examForm').getAttribute('data-total-questions');
-        const durationMinutes = Number('{{ exam.duration_minutes }}') || 60;
         let secondsLeft = durationMinutes * 60;
 
         function updateTimer() {
@@ -238,9 +237,29 @@
         document.querySelectorAll('input[type="radio"]').forEach(function(input) {
             input.addEventListener('change', updateProgress);
         });
-
-        updateTimer();
-        setInterval(updateTimer, 1000);
     </script>
+        
+        <script>
+        let left = {{ remaining_seconds }};
+        const timerEl = document.getElementById('timer');
+        const form = document.getElementById('examForm');
+
+        function render() {
+        const m = String(Math.floor(left / 60)).padStart(2, '0');
+        const s = String(left % 60).padStart(2, '0');
+        if (timerEl) timerEl.textContent = m + ':' + s;
+        }
+        render();
+
+        const t = setInterval(() => {
+            left--;
+                render();
+            if (left <= 0) {
+                clearInterval(t);
+                form.submit();
+            }
+        }, 1000);
+        </script>
+        
 </body>
 </html>

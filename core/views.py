@@ -1,5 +1,7 @@
 import random
 
+from django.http import request
+
 from core.models import Group, ExamSession
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -12,6 +14,8 @@ from core.models.question import Question
 from django.db import transaction
 from core.models import Answer
 from django.contrib import messages
+
+import exam
 
 
 @login_required
@@ -187,7 +191,8 @@ def start_exam_view(request, exam_id):
     if ExamResult.objects.filter(student=request.user, exam=exam).exists():
         return redirect('student_dashboard')
 
-    if not exam.is_open():
+    grace = 30 if request.method == 'POST' else 0
+    if not exam.is_open(grace_seconds=grace):
         messages.error(request, "İmtahan hazırda açıq deyil.")
         return redirect('student_dashboard')
     
@@ -242,5 +247,6 @@ def start_exam_view(request, exam_id):
         {
             'exam': exam,
             'questions': questions,
+            'remaining_seconds': exam.remaining_seconds(),
         },
     )
