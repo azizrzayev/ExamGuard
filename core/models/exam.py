@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from .question import Question
+from datetime import timedelta
+from django.utils import timezone
 
 class Exam(models.Model):
     EXAM_TYPES = [
@@ -22,7 +24,19 @@ class Exam(models.Model):
     start_time = models.DateTimeField(null=True, blank=True, verbose_name="Başlama vaxtı")
     groups = models.ManyToManyField('core.Group', related_name='exams', blank=True, verbose_name="Qruplar")
     created_at = models.DateTimeField(auto_now_add=True)
-
+    allow_reentry = models.BooleanField(default=True, verbose_name="Təkrar girişə icazə")
+    def is_open(self):
+        if not self.start_time:
+            return True
+        now = timezone.now()
+        end_time = self.start_time + timedelta(minutes=self.duration_minutes)
+        return self.start_time <= now < end_time
+    def has_ended(self):
+        if not self.start_time:
+            return False
+        now = timezone.now()
+        end_time = self.start_time + timedelta(minutes=self.duration_minutes)
+        return now >= end_time
     def __str__(self):
         return self.title
 

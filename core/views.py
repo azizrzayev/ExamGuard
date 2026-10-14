@@ -1,4 +1,6 @@
-from core.models import Group
+import random
+
+from core.models import Group, ExamSession
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from core.forms import GroupForm, ExamForm, PDFUploadForm
@@ -9,6 +11,8 @@ from core.services.pdf_import import parse_test_questions
 from core.models.question import Question
 from django.db import transaction
 from core.models import Answer
+from django.contrib import messages
+
 
 @login_required
 def dashboard_view(request):
@@ -91,6 +95,7 @@ def student_dashboard(request):
         return redirect('teacher_dashboard')
 
     exams = Exam.objects.filter(groups__students=request.user).distinct()
+    exams = [e for e in exams if not e.has_ended()]
 
     results = {
         r.exam_id: r
@@ -182,7 +187,28 @@ def start_exam_view(request, exam_id):
     if ExamResult.objects.filter(student=request.user, exam=exam).exists():
         return redirect('student_dashboard')
 
-    questions = exam.questions.order_by('id')[: exam.questions_per_student]
+    if not exam.is_open():
+        messages.error(request, "İmtahan hazırda açıq deyil.")
+        return redirect('student_dashboard')
+    
+    session, created = ExamSession.objects.get_or_create(
+    student=request.user,
+    exam=exam,
+)
+    
+    if request.method == 'GET' and not created and not exam.allow_reentry:
+        messages.error(request, "Bu imtahana yalnız bir dəfə girmək olar.")
+        return redirect('student_dashboard')
+
+    
+    if created:
+        all_questions = list(exam.questions.all())
+        sample_size = min(len(all_questions), exam.questions_per_student)
+        selected_questions = random.sample(all_questions, sample_size)
+        session.questions.set(selected_questions)
+
+    
+    questions = session.questions.order_by('id')
 
     if request.method == 'POST':
         for q in questions:
@@ -208,7 +234,6 @@ def start_exam_view(request, exam_id):
             exam=exam,
             defaults={'score': score, 'total': total},
         )
-
         return redirect('student_dashboard')
 
     return render(

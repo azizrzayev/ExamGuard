@@ -163,6 +163,13 @@
                                 {% endif %}
                             </div>
 
+                            <div class="mb-3 form-check">
+                                {{ exam_form.allow_reentry }}
+                                <label class="form-check-label" for="{{ exam_form.allow_reentry.id_for_label }}">
+                                {{ exam_form.allow_reentry.label }}
+                                 </label>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold text-white-50 small">İmtahan növü</label>
                                 {{ exam_form.exam_type }}
@@ -233,7 +240,7 @@
                 </div>
             </div>
 
-            <!-- Yaradılmış İmtahanlar Cədvəli -->
+           
             <div class="col-lg-7">
                 <div class="glass-panel h-100">
                     <div class="glass-header-teacher py-3 px-4">
@@ -268,7 +275,7 @@
                                             </td>
                                         </tr>
 
-                                        <!-- Sual Əlavə Etmə Modalı -->
+                                       
                                         <div class="modal fade" id="addQuestionModal{{ exam.id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                                 <div class="modal-content modal-content-glass">

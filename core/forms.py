@@ -13,7 +13,8 @@ class ExamForm(forms.ModelForm):
             'questions_per_student', 
             'start_time', 
             'groups',
-            'exam_type'
+            'exam_type',
+            'allow_reentry',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İmtahan Adı'}),
@@ -55,6 +56,8 @@ class QuestionForm(forms.ModelForm):
             'option_c': forms.TextInput(attrs={'class': 'form-control'}),
             'option_d': forms.TextInput(attrs={'class': 'form-control'}),
             'correct_option': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'A, B, C və ya D'}),
+            
+
         }
 
 class GroupForm(forms.ModelForm):
