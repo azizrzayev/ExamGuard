@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Panel{% endblock %} · ExamGuard</title>
+<style>
+  :root{
+    --ink:#1f2a24; --muted:#7a8580; --paper:#f6f1e7; --card:#fffdf8; --line:#e6dfd0;
+    --side:#1f3d2f; --side2:#2a5240; --amber:#e0a030; --amber-d:#b97d12;
+    --green:#2e7d4f; --red:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--paper);color:var(--ink);display:flex;min-height:100vh}
+  aside{width:230px;background:var(--side);color:#fff;padding:20px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .brand{font-size:20px;font-weight:700;color:var(--amber);margin-bottom:4px}
+  .role{font-size:12px;color:#b9cbbf;margin-bottom:24px}
+  aside nav a{display:block;color:#dfe9e2;text-decoration:none;padding:10px 12px;border-radius:8px;margin-bottom:4px}
+  aside nav a:hover{background:var(--side2)}
+  aside nav a.on{background:var(--amber);color:#2a1d00;font-weight:600}
+  .me{margin-top:auto;font-size:13px;color:#b9cbbf}
+  .me button{margin-top:8px;width:100%;padding:8px;border:1px solid #4d7260;background:transparent;color:#fff;border-radius:8px;cursor:pointer}
+  main{flex:1;padding:28px;min-width:0}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap}
+  .top h1{margin:0;font-size:24px}
+  .btn{display:inline-block;background:var(--amber);color:#2a1d00;border:0;padding:10px 16px;border-radius:8px;font-weight:600;text-decoration:none;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .msg{background:#e3f3e8;color:#1d5a35;border:1px solid #b9dfc6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+  .msg.error{background:#fbe5e2;color:#8a2b20;border-color:#efbdb6}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .form-control{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:15px}
+  .err{color:var(--red);font-size:13px;margin-top:4px}
+  @media(max-width:760px){
+    body{flex-direction:column}
+    aside{width:100%;height:auto;position:static}
+    .me{margin-top:14px}
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">ExamGuard</div>
+  <div class="role">Admin · {{ request.user.institution.name }}</div>
+  <nav>
+    {% with current=request.resolver_match.url_name %}
+      <a href="{% url 'admin_dashboard' %}" class="{% if current == 'admin_dashboard' %}on{% endif %}">Panel</a>
+    {% endwith %}
+  </nav>
+  <div class="me">
+    {{ request.user.get_full_name|default:request.user.username }}
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit">Çıxış</button>
+    </form>
+  </div>
+</aside>
+
+<main>
+  {% for m in messages %}
+    <div class="msg {% if m.tags == 'error' %}error{% endif %}">{{ m }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

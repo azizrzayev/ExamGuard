@@ -14,6 +14,27 @@ from django.contrib.auth import get_user_model
 from core.models import Institution
 from core.forms import InstitutionAdminForm
 
+User = get_user_model()
+
+@login_required
+def admin_dashboard(request):
+    if not request.user.is_admin():
+        return redirect('dashboard')
+
+    institution = request.user.institution
+
+    context = {
+        'institution': institution,
+        'teacher_count': User.objects.filter(
+            institution=institution, role='teacher'
+        ).count(),
+        'student_count': User.objects.filter(
+            institution=institution, role='student'
+        ).count(),
+    }
+
+    return render(request, 'admin_dashboard.html', context)
+
 @login_required
 def institution_admin_create_view(request, institution_id):
     # Superadmin yoxlaması
@@ -70,8 +91,10 @@ def dashboard_view(request):
     
     if request.user.is_superadmin():
         return redirect('superadmin_dashboard')
+    
+    if request.user.is_admin():
+        return redirect('admin_dashboard')
     return redirect('student_dashboard')
-
 
 @login_required
 def teacher_dashboard(request):
@@ -81,7 +104,7 @@ def teacher_dashboard(request):
     exams = Exam.objects.filter(created_by=request.user).order_by('-created_at')
     return render(request, 'teacher_dashboard.html', {'exams': exams})
 
-User = get_user_model()
+
 
 @login_required
 def superadmin_dashboard(request):
