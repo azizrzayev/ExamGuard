@@ -46,6 +46,7 @@
   <nav>
     {% with current=request.resolver_match.url_name %}
       <a href="{% url 'admin_dashboard' %}" class="{% if current == 'admin_dashboard' %}on{% endif %}">Panel</a>
+      <a href="{% url 'teacher_create' %}" class="{% if current == 'teacher_create' %}on{% endif %}">Yeni müəllim</a>
     {% endwith %}
   </nav>
   <div class="me">

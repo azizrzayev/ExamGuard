@@ -19,6 +19,7 @@ urlpatterns = [
     path('superadmin/institutions/new/', views.institution_create_view, name='institution_create'),
     path('superadmin/institutions/<int:institution_id>/add-admin/', views.institution_admin_create_view, name='institution_admin_create'),
     path('admin-panel/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin-panel/teachers/new/', views.teacher_create_view, name='teacher_create'),
     # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),

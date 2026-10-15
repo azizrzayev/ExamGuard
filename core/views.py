@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from pypdf import PdfReader
-from core.forms import GroupForm, ExamForm, InstitutionForm, PDFUploadForm
+from core.forms import GroupForm, ExamForm, InstitutionForm, PDFUploadForm, TeacherForm
 from core.models import Group, ExamSession, Answer
 from core.models.exam import Exam
 from core.models.question import Question
@@ -67,7 +67,26 @@ def institution_admin_create_view(request, institution_id):
             'institution': institution,
         },
     )
+@login_required
+def teacher_create_view(request):
 
+    if not request.user.is_admin():
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = TeacherForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = 'teacher'
+            user.institution = request.user.institution  
+            user.save()
+
+            messages.success(request, "Müəllim uğurla yaradıldı.")
+            return redirect('admin_dashboard')
+    else:
+        form = TeacherForm()
+
+    return render(request, 'teacher_create.html', {'form': form})
 @login_required
 def institution_create_view(request):
     # Superadmin yoxlaması
