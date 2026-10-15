@@ -2,7 +2,7 @@ from django import forms
 from core.models import Question, Exam, Group
 from django.core.exceptions import ValidationError
 from core.models.institution import Institution
-
+from django.contrib.auth import get_user_model
 class InstitutionForm(forms.ModelForm):
 
     class Meta:
@@ -24,6 +24,53 @@ class InstitutionForm(forms.ModelForm):
             'unique': 'Bu adla müəssisə artıq mövcuddur.',
         }
 }
+
+User = get_user_model()
+
+class InstitutionAdminForm(forms.ModelForm):
+    password = forms.CharField(
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Şifrə',
+            }
+        ),
+        label='Şifrə',
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'password']
+        widgets = {
+            'username': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'İstifadəçi adı'}
+            ),
+            'first_name': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ad'}
+            ),
+            'last_name': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Soyad'}
+            ),
+            'email': forms.EmailInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'E-poçt ünvanı',
+                }
+            ),
+        }
+        labels = {
+            'username': 'İstifadəçi adı',
+            'first_name': 'Ad',
+            'last_name': 'Soyad',
+            'email': 'E-poçt',
+        }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password'])
+        if commit:
+            user.save()
+        return user
 class ExamForm(forms.ModelForm):
     class Meta:
         model = Exam

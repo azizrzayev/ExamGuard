@@ -19,3 +19,6 @@ class Institution(models.Model):
 
     def __str__(self):
         return self.name
+
+    def admins(self):
+        return self.users.filter(role='admin')

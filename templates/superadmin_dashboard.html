@@ -1,73 +1,49 @@
-{% extends 'superadmin_base.html' %}
-{% block title %}İdarə paneli{% endblock %}
+{% extends "superadmin_base.html" %}
+{% block title %}Panel{% endblock %}
 
-{% block extra_css %}
-<style>
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:26px}
-    .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
-    .stat small{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
-    .stat strong{display:block;font-size:2rem;margin-top:8px;letter-spacing:-.03em}
-    .stat.hot{background:var(--ink);color:#fff;border-color:var(--ink)}
-    .stat.hot small{color:#9fb8ae}.stat.hot strong{color:var(--amber)}
-    .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
-    @media(max-width:1100px){.grid{grid-template-columns:1fr}}
-    .search{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font-size:.85rem;width:180px}
-    table{width:100%;border-collapse:collapse;font-size:.92rem}
-    th{text-align:left;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;padding:0 10px 10px}
-    td{padding:13px 10px;border-top:1px solid var(--line)}
-    tr:hover td{background:#faf6ec}
-    .name{font-weight:600}
-    
-</style>
-{% endblock %}
 {% block content %}
+<style>
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat small{color:var(--muted);display:block}
+  .stat b{font-size:28px}
+  table.t{width:100%;border-collapse:collapse}
+  table.t th,table.t td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
+  table.t th{color:var(--muted);font-weight:600;font-size:13px}
+  .t a{color:var(--amber-d);text-decoration:none;font-weight:600}
+</style>
+
 <div class="top">
-    <div>
-        <h1>Xoş gəldin, {{ request.user.username }}</h1>
-        <p class="sub">Bütün müəssisələrin ümumi vəziyyəti bir baxışda.</p>
-    </div>
-    <a class="btn" href="{% url 'institution_create' %}">＋ Yeni müəssisə</a>
+  <h1>Superadmin paneli</h1>
+  <a class="btn" href="{% url 'institution_create' %}">＋ Yeni müəssisə</a>
 </div>
 
-<section class="stats">
-    <div class="stat hot"><small>Müəssisələr</small><strong>{{ institution_count }}</strong></div>
-    <div class="stat"><small>Adminlər</small><strong>{{ admin_count }}</strong></div>
-    <div class="stat"><small>Müəllimlər</small><strong>{{ teacher_count }}</strong></div>
-    <div class="stat"><small>Tələbələr</small><strong>{{ student_count }}</strong></div>
-</section>
+<div class="stats">
+  <div class="stat"><small>Müəssisələr</small><b>{{ institution_count }}</b></div>
+  <div class="stat"><small>Adminlər</small><b>{{ admin_count }}</b></div>
+  <div class="stat"><small>Müəllimlər</small><b>{{ teacher_count }}</b></div>
+  <div class="stat"><small>Tələbələr</small><b>{{ student_count }}</b></div>
+</div>
 
-<section class="grid">
-    <div class="panel">
-        <h2>Müəssisələr <input class="search" id="q" placeholder="Axtar..."></h2>
-        <table>
-            <thead><tr><th>Müəssisə</th><th>Yaradılma tarixi</th></tr></thead>
-            <tbody id="rows">
-                {% for inst in institutions %}
-                <tr>
-                    <td class="name">{{ inst.name }}</td>
-                    <td>{{ inst.created_at|date:"d.m.Y" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2">Hələ müəssisə yoxdur.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div class="panel">
-        <h2>Son hadisələr</h2>
-        <p class="sub">Hadisə jurnalı tezliklə əlavə olunacaq.</p>
-    </div>
-</section>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.getElementById('q').addEventListener('input', function () {
-    const t = this.value.toLowerCase();
-    document.querySelectorAll('#rows tr').forEach(r => {
-        r.style.display = r.textContent.toLowerCase().includes(t) ? '' : 'none';
-    });
-});
-</script>
+<div class="panel">
+  <table class="t">
+    <tr><th>Müəssisə</th><th>Yaradılıb</th><th>Adminlər</th><th></th></tr>
+    {% for inst in institutions %}
+    <tr>
+      <td>{{ inst.name }}</td>
+      <td>
+            {% for a in inst.admins %}
+            {{ a.first_name }} {{ a.last_name }} ({{ a.username }}){% if not forloop.last %}, {% endif %}
+            {% empty %}
+            <span style="color:var(--muted)">Admin yoxdur</span>
+        {% endfor %}
+        </td>
+      <td>{{ inst.created_at|date:"d.m.Y" }}</td>
+      <td><a href="{% url 'institution_admin_create' inst.id %}">＋ Admin</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">Hələ müəssisə yoxdur.</td></tr>
+    {% endfor %}
+  </table>
+</div>
 {% endblock %}

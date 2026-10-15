@@ -1,5 +1,4 @@
 import random
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -13,8 +12,40 @@ from core.models.result import ExamResult
 from core.services.pdf_import import parse_test_questions
 from django.contrib.auth import get_user_model
 from core.models import Institution
+from core.forms import InstitutionAdminForm
 
+@login_required
+def institution_admin_create_view(request, institution_id):
+    # Superadmin yoxlaması
+    if not request.user.is_superadmin():
+        return redirect('dashboard')
 
+    institution = get_object_or_404(Institution, id=institution_id)
+
+    if request.method == 'POST':
+        form = InstitutionAdminForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = 'admin'
+            user.institution = institution
+            user.save()
+
+            messages.success(
+                request,
+                f"'{institution.name}' üçün inzibatçı (admin) uğurla yaradıldı.",
+            )
+            return redirect('superadmin_dashboard')
+    else:
+        form = InstitutionAdminForm()
+
+    return render(
+        request,
+        'institution_admin_create.html',
+        {
+            'form': form,
+            'institution': institution,
+        },
+    )
 
 @login_required
 def institution_create_view(request):
