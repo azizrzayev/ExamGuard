@@ -1,7 +1,29 @@
 from django import forms
 from core.models import Question, Exam, Group
 from django.core.exceptions import ValidationError
+from core.models.institution import Institution
 
+class InstitutionForm(forms.ModelForm):
+
+    class Meta:
+        model = Institution
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Müəssisənin adı',
+                }
+            ),
+        }
+        labels = {
+            'name': 'Müəssisə adı',
+        }
+        error_messages = {
+            'name': {
+            'unique': 'Bu adla müəssisə artıq mövcuddur.',
+        }
+}
 class ExamForm(forms.ModelForm):
     class Meta:
         model = Exam

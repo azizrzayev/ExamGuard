@@ -16,6 +16,7 @@ urlpatterns = [
     path('teacher/', views.teacher_dashboard, name='teacher_dashboard'),
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('superadmin/', views.superadmin_dashboard, name='superadmin_dashboard'),
+    path('superadmin/institutions/new/', views.institution_create_view, name='institution_create'),
 
     # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
