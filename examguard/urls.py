@@ -7,7 +7,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Giriş ve Çıxış
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('login/', views.user_login_view, name='login'),
+    path('admin-login/', views.admin_login_view, name='admin_login'),
+    path('superadmin-login/', views.superadmin_login_view, name='superadmin_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     # Paneller
@@ -20,6 +22,7 @@ urlpatterns = [
     path('superadmin/institutions/<int:institution_id>/add-admin/', views.institution_admin_create_view, name='institution_admin_create'),
     path('admin-panel/', views.admin_dashboard, name='admin_dashboard'),
     path('admin-panel/teachers/new/', views.teacher_create_view, name='teacher_create'),
+    path('admin-panel/groups/', views.admin_groups_view, name='admin_groups'),
     # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),

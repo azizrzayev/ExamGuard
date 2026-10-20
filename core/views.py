@@ -4,13 +4,14 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from pypdf import PdfReader
-from core.forms import GroupForm, ExamForm, InstitutionForm, PDFUploadForm, TeacherForm
+from core.forms import (GroupForm, AdminGroupForm, ExamForm, InstitutionForm, PDFUploadForm, TeacherForm)
 from core.models import Group, ExamSession, Answer
 from core.models.exam import Exam
 from core.models.question import Question
 from core.models.result import ExamResult
 from core.services.pdf_import import parse_test_questions, parse_written_questions
 from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, login
 from core.models import Institution
 from core.forms import InstitutionAdminForm
 from core.code_import import parse_code_tasks
@@ -23,6 +24,61 @@ from core.code_runner import run_python, check_task
 from core.models import CodeSubmission
 
 User = get_user_model()
+
+def role_login_view(request, allowed_roles, title, subtitle):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    error = None
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
+
+        if user and user.role in allowed_roles:
+            login(request, user)
+            return redirect('dashboard')
+
+        error = 'İstifadəçi adı, şifrə və ya giriş növü yanlışdır.'
+
+    return render(request, 'login.html', {
+        'error': error,
+        'login_title': title,
+        'login_subtitle': subtitle,
+    })
+
+
+def user_login_view(request):
+    return role_login_view(
+        request,
+        ('teacher', 'student'),
+        'ExamGuard',
+        'Müəllim və tələbə girişi',
+    )
+
+
+def admin_login_view(request):
+    return role_login_view(
+        request,
+        ('admin',),
+        'ExamGuard Admin',
+        'Müəssisə inzibatçısı girişi',
+    )
+
+
+def superadmin_login_view(request):
+    return role_login_view(
+        request,
+        ('superadmin',),
+        'ExamGuard Control',
+        'Sistem superadmin girişi',
+    )
 
 @login_required
 def admin_dashboard(request):
@@ -95,6 +151,40 @@ def teacher_create_view(request):
         form = TeacherForm()
 
     return render(request, 'teacher_create.html', {'form': form})
+@login_required
+def admin_groups_view(request):
+    if not request.user.is_admin():
+        return redirect('dashboard')
+
+    institution = request.user.institution
+
+    if request.method == 'POST':
+        form = AdminGroupForm(
+            request.POST,
+            institution=institution,
+        )
+
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.institution = institution
+            group.save()
+
+            messages.success(
+                request,
+                f"'{group.name}' qrupu uğurla yaradıldı.",
+            )
+            return redirect('admin_groups')
+    else:
+        form = AdminGroupForm(institution=institution)
+
+    groups = Group.objects.filter(
+        institution=institution,
+    ).select_related('teacher').order_by('name')
+
+    return render(request, 'admin_groups.html', {
+        'group_form': form,
+        'groups': groups,
+    })
 @login_required
 def institution_create_view(request):
     # Superadmin yoxlaması
@@ -398,8 +488,14 @@ def upload_exam_pdf(request, exam_id):
 
 @login_required
 def start_exam_view(request, exam_id):
-    exam = get_object_or_404(Exam, id=exam_id)
+    if request.user.role != 'student':
+        return redirect('dashboard')
 
+    exam = get_object_or_404(
+        Exam,
+        id=exam_id,
+        groups__students=request.user,
+    )
     # Artıq təhvil verilibsə
     if ExamResult.objects.filter(student=request.user, exam=exam).exists():
         return redirect('student_dashboard')
@@ -519,7 +615,16 @@ def exam_results_view(request, exam_id):
 @login_required
 @require_POST
 def run_code_view(request, exam_id):
-    exam = get_object_or_404(Exam, id=exam_id, exam_type='code')
+    if request.user.role != 'student':
+        return JsonResponse({'error': 'İcazəniz yoxdur.'}, status=403)
+
+    exam = get_object_or_404(
+        Exam,
+        id=exam_id,
+        exam_type='code',
+        groups__students=request.user,
+    )
+
 
     if ExamResult.objects.filter(student=request.user, exam=exam).exists() \
             or not exam.is_open(grace_seconds=30):
@@ -552,7 +657,15 @@ def run_code_view(request, exam_id):
 @login_required
 @require_POST
 def submit_task_view(request, exam_id):
-    exam = get_object_or_404(Exam, id=exam_id, exam_type='code')
+    if request.user.role != 'student':
+        return JsonResponse({'error': 'İcazəniz yoxdur.'}, status=403)
+
+    exam = get_object_or_404(
+        Exam,
+        id=exam_id,
+        exam_type='code',
+        groups__students=request.user,
+    )
 
     if ExamResult.objects.filter(student=request.user, exam=exam).exists() \
             or not exam.is_open(grace_seconds=30):

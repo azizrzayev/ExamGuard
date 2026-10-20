@@ -4,7 +4,15 @@ from django.db import models
 
 class Group(models.Model):
     name = models.CharField(max_length=50)
-    
+
+    institution = models.ForeignKey(
+        'core.Institution',
+        on_delete=models.PROTECT,
+        related_name='groups',
+        null=True,
+        blank=True,
+        verbose_name='Müəssisə',
+    )
 
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,

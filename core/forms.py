@@ -182,6 +182,35 @@ class GroupForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Məs: 2445a'}),
         }
 
+class AdminGroupForm(forms.ModelForm):
+    class Meta:
+        model = Group
+        fields = ['name', 'teacher']
+        widgets = {
+            'name': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Məs: 2445a',
+                }
+            ),
+            'teacher': forms.Select(
+                attrs={'class': 'form-control'}
+            ),
+        }
+        labels = {
+            'name': 'Qrupun adı',
+            'teacher': 'Müəllim',
+        }
+
+    def __init__(self, *args, institution=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if institution:
+            self.fields['teacher'].queryset = User.objects.filter(
+                institution=institution,
+                role='teacher',
+            ).order_by('first_name', 'last_name', 'username')
+
 class PDFUploadForm(forms.Form):
     pdf_file = forms.FileField(label="Sual PDF-i")
 
