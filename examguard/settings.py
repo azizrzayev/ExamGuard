@@ -17,8 +17,8 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = not PROD
 
-ALLOWED_HOSTS = ['ADIN.pythonanywhere.com', 'localhost', '127.0.0.1']
-CSRF_TRUSTED_ORIGINS = ['https://ADIN.pythonanywhere.com']
+ALLOWED_HOSTS = ['examguard.pythonanywhere.com', 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://examguard.pythonanywhere.com']
 
 
 # Application definition
