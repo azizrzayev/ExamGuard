@@ -1,3 +1,4 @@
+import re
 def parse_test_questions(text):
     questions = []
     errors = []
@@ -41,4 +42,41 @@ def parse_test_questions(text):
 
             current_q = {}
 
+    return questions, errors
+
+
+def parse_written_questions(text):
+    questions = []
+    errors = []
+    current = None
+
+    def finish(q):
+        if q is None:
+            return
+        body = " ".join(q['parts']).strip()
+        points = 1.0
+        m = re.search(r'\(\s*(\d+(?:[.,]\d+)?)\s*bal\s*\)\s*$', body, re.IGNORECASE)
+        if m:
+            points = float(m.group(1).replace(',', '.'))
+            body = body[:m.start()].strip()
+        if not body:
+            errors.append(f"Sual {q['number']}: mətn boşdur")
+            return
+        questions.append({'text': body, 'points': points})
+
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        m = re.match(r'^(\d+)[.)]\s+(.*)$', line)
+        if m:
+            finish(current)
+            current = {'number': m.group(1), 'parts': [m.group(2)]}
+        elif current is not None:
+            current['parts'].append(line)
+
+    finish(current)
+
+    if not questions and not errors:
+        errors.append("Heç bir sual tapılmadı. Format: '1. Sualın mətni (5 bal)'")
     return questions, errors

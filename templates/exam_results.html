@@ -18,6 +18,7 @@
                     <th>Bal</th>
                     <th>Faiz</th>
                     <th>Təhvil vaxtı</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -28,6 +29,10 @@
                     <td>{{ r.score }} / {{ r.total }}</td>
                     <td>{% widthratio r.score r.total 100 %}%</td>
                     <td>{{ r.submitted_at|date:"d.m.Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'grade_written' exam.id r.student.id %}"
+                           class="btn btn-sm btn-outline-light rounded-pill">Yoxla</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

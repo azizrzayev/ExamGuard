@@ -9,7 +9,7 @@ from core.models import Group, ExamSession, Answer
 from core.models.exam import Exam
 from core.models.question import Question
 from core.models.result import ExamResult
-from core.services.pdf_import import parse_test_questions
+from core.services.pdf_import import parse_test_questions, parse_written_questions
 from django.contrib.auth import get_user_model
 from core.models import Institution
 from core.forms import InstitutionAdminForm
@@ -155,12 +155,18 @@ def create_exam_view(request):
         pdf_ok = pdf_form.is_valid()
 
         if form_ok and pdf_ok:
+            exam_type = form.cleaned_data.get('exam_type')
+            question_type = exam_type if exam_type in ('written', 'code') else 'test'
+
             try:
                 reader = PdfReader(pdf_form.cleaned_data['pdf_file'])
                 full_text = "\n".join(
                     page.extract_text() or "" for page in reader.pages
                 )
-                questions, errors = parse_test_questions(full_text)
+                if question_type == 'written':
+                    questions, errors = parse_written_questions(full_text)
+                else:
+                    questions, errors = parse_test_questions(full_text)
             except Exception:
                 pdf_form.add_error('pdf_file', 'PDF faylını oxumaq olmadı.')
             else:
@@ -183,7 +189,12 @@ def create_exam_view(request):
                         form.save_m2m()
 
                         Question.objects.bulk_create([
-                            Question(exam=exam, created_by=request.user, **q)
+                            Question(
+                                exam=exam,
+                                created_by=request.user,
+                                question_type=question_type,
+                                **q,
+                            )
                             for q in questions
                         ])
                     messages.success(request, "İmtahan uğurla yaradıldı.")
@@ -197,6 +208,51 @@ def create_exam_view(request):
         'pdf_form': pdf_form,
     })
 
+@login_required
+def grade_written_view(request, exam_id, student_id):
+    if not request.user.is_teacher():
+        return redirect('dashboard')
+
+    exam = get_object_or_404(Exam, id=exam_id, created_by=request.user)
+    student = get_object_or_404(User, id=student_id)
+    result = get_object_or_404(ExamResult, exam=exam, student=student)
+
+    answers = (
+        Answer.objects
+        .filter(student=student, question__exam=exam, question__question_type='written')
+        .select_related('question')
+        .order_by('question_id')
+    )
+
+    if request.method == 'POST':
+        for a in answers:
+            raw = request.POST.get(f'points_{a.id}', '').strip().replace(',', '.')
+            if raw == '':
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                continue
+            a.awarded_points = max(0.0, min(value, a.question.points))
+            a.save()
+
+        # Yekun nəticəni yenidən hesabla
+        all_answers = Answer.objects.filter(
+            student=student, question__exam=exam
+        ).select_related('question')
+        result.score = sum(x.awarded_points or 0 for x in all_answers)
+        result.total = sum(x.question.points for x in all_answers)
+        result.save()
+
+        messages.success(request, "Ballar saxlanıldı.")
+        return redirect('exam_results', exam_id=exam.id)
+
+    return render(request, 'grade_written.html', {
+        'exam': exam,
+        'student': student,
+        'result': result,
+        'answers': answers,
+    })
 
 @login_required
 def teacher_groups(request):
@@ -298,61 +354,61 @@ def upload_exam_pdf(request, exam_id):
 
 @login_required
 def start_exam_view(request, exam_id):
-    if request.user.is_teacher():
-        return redirect('teacher_dashboard')
+    exam = get_object_or_404(Exam, id=exam_id)
 
-    exam = get_object_or_404(Exam, id=exam_id, groups__students=request.user)
-
+    # Artıq təhvil verilibsə
     if ExamResult.objects.filter(student=request.user, exam=exam).exists():
         return redirect('student_dashboard')
 
-    grace = 30 if request.method == 'POST' else 0
-    if not exam.is_open(grace_seconds=grace):
-        messages.error(request, "İmtahan hazırda açıq deyil.")
+    # İmtahan vaxtı yoxlanışı (POST üçün 30 saniyə güzəşt)
+    if not exam.is_open(grace_seconds=30):
         return redirect('student_dashboard')
 
     session, created = ExamSession.objects.get_or_create(
-        student=request.user,
-        exam=exam,
+        student=request.user, exam=exam
     )
 
     if request.method == 'GET' and not created and not exam.allow_reentry:
-        messages.error(request, "Bu imtahana yalnız bir dəfə girmək olar.")
         return redirect('student_dashboard')
 
+ 
     if created:
-        all_questions = list(exam.questions.all())
-        sample_size = min(len(all_questions), exam.questions_per_student)
-        selected_questions = random.sample(all_questions, sample_size)
-        session.questions.set(selected_questions)
+        pool = list(exam.questions.all())
+        n = exam.questions_per_student
+        chosen = random.sample(pool, n) if n and n < len(pool) else pool
+        session.questions.set(chosen)
 
-    questions = session.questions.order_by('id')
+    questions = session.questions.all()
 
     if request.method == 'POST':
-        for q in questions:
-            selected_option = request.POST.get(f'question_{q.id}')
-            if not selected_option:
-                continue
+        score = 0.0
+        total = 0.0
 
-            Answer.objects.update_or_create(
-                student=request.user,
-                question=q,
-                defaults={'selected_option': selected_option},
-            )
+        for question in questions:
+            total += question.points
+            value = request.POST.get(f'question_{question.id}', '').strip()
 
-        student_answers = Answer.objects.filter(
-            student=request.user, question__exam=exam
-        )
-
-        score = len([ans for ans in student_answers if ans.is_correct()])
-        total = len(questions)
+            if question.question_type == 'written':
+                # Yazılı: mətn saxlanır, bal müəllim yoxlayanda verilir
+                Answer.objects.update_or_create(
+                    student=request.user, question=question,
+                    defaults={'text_answer': value, 'selected_option': '', 'awarded_points': None},
+                )
+            else:
+                # Test: avtomatik yoxlanır
+                earned = question.calculate_score(value) or 0.0
+                score += earned
+                Answer.objects.update_or_create(
+                    student=request.user, question=question,
+                    defaults={'selected_option': value.upper()[:1], 'text_answer': '', 'awarded_points': earned},
+                )
 
         ExamResult.objects.update_or_create(
-            student=request.user,
-            exam=exam,
+            student=request.user, exam=exam,
             defaults={'score': score, 'total': total},
         )
         return redirect('student_dashboard')
+
     return render(request, 'take_exam.html', {
         'exam': exam,
         'questions': questions,

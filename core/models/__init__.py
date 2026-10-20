@@ -6,3 +6,4 @@ from .answer import Answer
 from .result import ExamResult
 from .session import ExamSession
 from .institution import Institution
+from .code_task import CodeTask, CodeTestCase
