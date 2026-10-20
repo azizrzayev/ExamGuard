@@ -29,4 +29,6 @@ urlpatterns = [
     path('teacher/exams/new/', views.create_exam_view, name='create_exam'),
     path('teacher/exams/<int:exam_id>/results/', views.exam_results_view, name='exam_results'),
     path('teacher/exams/<int:exam_id>/grade/<int:student_id>/', views.grade_written_view, name='grade_written'),
+    path('student/exam/<int:exam_id>/run/', views.run_code_view, name='run_code'),
+    path('student/exam/<int:exam_id>/submit-task/', views.submit_task_view, name='submit_task'),
 ]

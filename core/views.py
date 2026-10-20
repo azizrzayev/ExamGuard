@@ -13,6 +13,14 @@ from core.services.pdf_import import parse_test_questions, parse_written_questio
 from django.contrib.auth import get_user_model
 from core.models import Institution
 from core.forms import InstitutionAdminForm
+from core.code_import import parse_code_tasks
+from core.code_runner import run_python
+from core.models import CodeTask, CodeTestCase
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from core.code_runner import run_python, check_task
+from core.models import CodeSubmission
 
 User = get_user_model()
 
@@ -158,29 +166,47 @@ def create_exam_view(request):
             exam_type = form.cleaned_data.get('exam_type')
             question_type = exam_type if exam_type in ('written', 'code') else 'test'
 
+            questions = []
+            code_tasks = []
+            errors = []
+            full_text = ""
+
             try:
                 reader = PdfReader(pdf_form.cleaned_data['pdf_file'])
                 full_text = "\n".join(
                     page.extract_text() or "" for page in reader.pages
                 )
-                if question_type == 'written':
+                if question_type == 'code':
+                    code_tasks, errors = parse_code_tasks(full_text)
+                elif question_type == 'written':
                     questions, errors = parse_written_questions(full_text)
                 else:
                     questions, errors = parse_test_questions(full_text)
             except Exception:
                 pdf_form.add_error('pdf_file', 'PDF faylını oxumaq olmadı.')
-            else:
-                if not full_text.strip():
+                full_text = None
+
+            if full_text is not None:
+                # Kod imtahanı: etalon kodu işlədib gözlənilən çıxışları hesabla
+                if question_type == 'code' and not errors:
+                    for i, task in enumerate(code_tasks, start=1):
+                        task['tests'] = []
+                        for inp in task['inputs']:
+                            out, err = run_python(task['reference_code'], inp)
+                            if err:
+                                errors.append(f"Tapşırıq {i}: etalon kod xəta verdi: {err[:150]}")
+                                break
+                            task['tests'].append((inp, out))
+
+                found = code_tasks if question_type == 'code' else questions
+
+                if not full_text.strip() or (not found and not errors):
                     pdf_form.add_error(
                         'pdf_file', 'PDF-də düzgün formatlı suallar tapılmadı.'
                     )
                 elif errors:
                     for error in errors:
                         pdf_form.add_error('pdf_file', error)
-                elif not questions:
-                    pdf_form.add_error(
-                        'pdf_file', 'PDF-də düzgün formatlı suallar tapılmadı.'
-                    )
                 else:
                     with transaction.atomic():
                         exam = form.save(commit=False)
@@ -188,15 +214,33 @@ def create_exam_view(request):
                         exam.save()
                         form.save_m2m()
 
-                        Question.objects.bulk_create([
-                            Question(
-                                exam=exam,
-                                created_by=request.user,
-                                question_type=question_type,
-                                **q,
-                            )
-                            for q in questions
-                        ])
+                        if question_type == 'code':
+                            for task in code_tasks:
+                                ct = CodeTask.objects.create(
+                                    exam=exam,
+                                    title=task['title'],
+                                    description=task['description'],
+                                    reference_code=task['reference_code'],
+                                    points=task['points'],
+                                    starter_code=task['starter_code'],
+                                )
+                                CodeTestCase.objects.bulk_create([
+                                    CodeTestCase(
+                                        task=ct, input_data=inp, expected_output=out,
+                                        is_hidden=(idx > 0),
+                                    )
+                                    for idx, (inp, out) in enumerate(task['tests'])
+                                ])
+                        else:
+                            Question.objects.bulk_create([
+                                Question(
+                                    exam=exam,
+                                    created_by=request.user,
+                                    question_type=question_type,
+                                    **q,
+                                )
+                                for q in questions
+                            ])
                     messages.success(request, "İmtahan uğurla yaradıldı.")
                     return redirect('teacher_dashboard')
     else:
@@ -378,6 +422,48 @@ def start_exam_view(request, exam_id):
         chosen = random.sample(pool, n) if n and n < len(pool) else pool
         session.questions.set(chosen)
 
+       
+    if exam.exam_type == 'code':
+        tasks = list(exam.code_tasks.all().order_by('id'))
+        subs = {
+            s.task_id: s
+            for s in CodeSubmission.objects.filter(student=request.user, task__in=tasks)
+        }
+
+        if request.method == 'POST':
+            score = 0.0
+            total = 0.0
+            for task in tasks:
+                sub = subs.get(task.id)
+                if sub is None:
+                 
+                    code = request.POST.get(f'code_{task.id}', '')
+                    passed, count = check_task(task, code)
+                    earned = task.points * passed / count if count else 0.0
+                    CodeSubmission.objects.update_or_create(
+                        student=request.user, task=task,
+                        defaults={'code': code, 'passed': passed, 'total': count, 'score': earned},
+                    )
+                else:
+                    earned = sub.score
+                score += earned
+                total += task.points
+            ExamResult.objects.update_or_create(
+                student=request.user, exam=exam,
+                defaults={'score': score, 'total': total},
+            )
+            return redirect('student_dashboard')
+
+        for task in tasks:
+            task.sub = subs.get(task.id)
+            task.initial_code = task.sub.code if task.sub else task.starter_code
+
+        return render(request, 'take_code_exam.html', {
+            'exam': exam,
+            'tasks': tasks,
+            'remaining_seconds': exam.remaining_seconds(),
+        })
+
     questions = session.questions.all()
 
     if request.method == 'POST':
@@ -429,3 +515,70 @@ def exam_results_view(request, exam_id):
             'results': results,
         },
     )
+
+@login_required
+@require_POST
+def run_code_view(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id, exam_type='code')
+
+    if ExamResult.objects.filter(student=request.user, exam=exam).exists() \
+            or not exam.is_open(grace_seconds=30):
+        return JsonResponse({'error': 'İmtahan bağlıdır.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        task = CodeTask.objects.filter(id=int(data.get('task_id')), exam=exam).first()
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Səhv sorğu.'}, status=400)
+
+    if task is None:
+        return JsonResponse({'error': 'Tapşırıq tapılmadı.'}, status=404)
+
+    code = data.get('code', '')
+    if len(code) > 20000:
+        return JsonResponse({'error': 'Kod çox uzundur.'}, status=400)
+
+    results = []
+    for t in task.visible_tests():
+        out, err = run_python(code, t.input_data)
+        results.append({
+            'input': t.input_data,
+            'expected': t.expected_output,
+            'output': out,
+            'error': err,
+            'ok': (not err and out == t.expected_output.strip()),
+        })
+    return JsonResponse({'results': results})
+@login_required
+@require_POST
+def submit_task_view(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id, exam_type='code')
+
+    if ExamResult.objects.filter(student=request.user, exam=exam).exists() \
+            or not exam.is_open(grace_seconds=30):
+        return JsonResponse({'error': 'İmtahan bağlıdır.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        task = CodeTask.objects.filter(id=int(data.get('task_id')), exam=exam).first()
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Səhv sorğu.'}, status=400)
+
+    if task is None:
+        return JsonResponse({'error': 'Tapşırıq tapılmadı.'}, status=404)
+
+    code = data.get('code', '')
+    if len(code) > 20000:
+        return JsonResponse({'error': 'Kod çox uzundur.'}, status=400)
+
+    passed, count = check_task(task, code)
+    earned = task.points * passed / count if count else 0.0
+
+    CodeSubmission.objects.update_or_create(
+        student=request.user, task=task,
+        defaults={'code': code, 'passed': passed, 'total': count, 'score': earned},
+    )
+    return JsonResponse({
+        'task_id': task.id, 'passed': passed, 'total': count,
+        'score': round(earned, 2), 'max': task.points,
+    })

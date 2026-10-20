@@ -8,6 +8,7 @@ class Exam(models.Model):
     EXAM_TYPES = [
         ('test', 'Test'),
         ('written', 'Yazılı'),
+        ('code', 'Proqramlaşdırma (Kod)'),
     ]
     title = models.CharField(max_length=200, verbose_name="İmtahan adı")
     exam_type = models.CharField(

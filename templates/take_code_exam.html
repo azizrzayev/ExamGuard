@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ exam.title }} — ExamGuard</title>
+<style>
+  :root{
+    --bg:#0f172a; --glass:rgba(255,255,255,.07); --line:rgba(255,255,255,.13);
+    --txt:#f8fafc; --mut:#94a3b8; --p1:#ec4899; --p2:#8b5cf6; --ok:#34d399; --bad:#f87171; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--txt); font-family:Segoe UI,Arial,sans-serif;
+    background:radial-gradient(circle at top left,#312e81 0%,transparent 35%),
+               radial-gradient(circle at bottom right,#7e22ce 0%,transparent 35%),var(--bg);
+    background-attachment:fixed;
+  }
+  .card{background:var(--glass);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(16px)}
+  pre{margin:0;font-family:Consolas,"Courier New",monospace;font-size:14px;white-space:pre-wrap;word-break:break-word}
+
+  .layout{display:grid;grid-template-columns:290px 1fr;gap:20px;max-width:1280px;margin:0 auto;padding:20px}
+
+  /* Sol panel */
+  aside.side{position:sticky;top:20px;align-self:start;padding:18px;max-height:calc(100vh - 40px);overflow:auto}
+  .brand{font-weight:700;font-size:18px;margin-bottom:14px}
+  .brand span{color:var(--p1)}
+  .lbl{display:block;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 4px}
+  .val{font-weight:600;margin-bottom:12px;word-break:break-word}
+  .timer{text-align:center;padding:12px;border-radius:14px;margin-bottom:14px;
+         background:rgba(245,158,11,.14);border:1px solid rgba(251,191,36,.4);color:#fef3c7}
+  .timer b{display:block;font-size:32px;letter-spacing:.04em}
+  .timer.low{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.6);color:#fecaca}
+  .total{display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;margin-bottom:12px;
+         background:rgba(255,255,255,.06);border:1px solid var(--line)}
+  .total b{color:var(--ok)}
+  ul.tasks{list-style:none;margin:0 0 14px;padding:0}
+  .st-item{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:10px;
+           font-size:13px;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid transparent}
+  .st-item:hover{background:rgba(255,255,255,.1)}
+  .st-item.cur{border-color:#c084fc;background:rgba(139,92,246,.2)}
+  .st-item .badge{color:var(--mut);white-space:nowrap}
+  .st-item.done .badge{color:var(--ok);font-weight:600}
+  .warn{display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;margin-bottom:12px;
+        background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:14px}
+  .warn b{color:var(--warn)}
+  ul.notes{list-style:none;margin:0 0 14px;padding:0;max-height:170px;overflow:auto}
+  ul.notes li{font-size:12.5px;padding:7px 9px;margin-bottom:5px;border-radius:8px;line-height:1.35;
+              background:rgba(255,255,255,.05);border-left:3px solid var(--mut)}
+  ul.notes li.ok{border-left-color:var(--ok)}
+  ul.notes li.warn{border-left-color:var(--warn)}
+  ul.notes li.bad{border-left-color:var(--bad)}
+  ul.notes small{display:block;color:var(--mut);font-size:11px}
+  .btn{border:0;color:#fff;font-weight:600;font-size:15px;padding:12px 24px;border-radius:12px;cursor:pointer;font-family:inherit}
+  .btn.finish{width:100%;background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.6)}
+  .btn.run{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}
+  .btn.submit{background:linear-gradient(135deg,var(--p1),var(--p2));box-shadow:0 8px 22px rgba(168,85,247,.35)}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .btn:hover:not(:disabled){transform:translateY(-2px)}
+
+  /* Əsas hissə */
+  select{width:100%;padding:12px 14px;border-radius:12px;font:inherit;font-weight:600;color:#fff;margin-bottom:16px;
+         background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);cursor:pointer}
+  select option{color:#111}
+  .desc-card{padding:20px 24px;margin-bottom:16px}
+  .desc-card small{color:#67e8f9;font-weight:600}
+  .desc-card h2{margin:6px 0;font-size:20px;line-height:1.4}
+  .pts{color:var(--mut);font-size:13px}
+  .samples{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .box{padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12)}
+
+  /* Redaktor: rəngləmə üçün üst-üstə iki qat */
+  .editor-wrap{display:flex;height:400px;border-radius:14px;overflow:hidden;
+               background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18)}
+  .editor-wrap:focus-within{border-color:#c084fc}
+  #gutter,#hl,#editor{
+    font-family:Consolas,"Courier New",monospace;font-size:15px;line-height:1.55;
+    font-variant-ligatures:none;letter-spacing:0;tab-size:4;margin:0;
+  }
+  #gutter{flex:none;width:52px;padding:16px 10px 16px 0;text-align:right;color:#64748b;overflow:hidden;
+          user-select:none;white-space:pre;background:rgba(0,0,0,.22);border-right:1px solid rgba(255,255,255,.1)}
+  .code-area{position:relative;flex:1;min-width:0}
+  #hl,#editor{position:absolute;top:0;left:0;right:0;bottom:0;padding:16px 14px;border:0;white-space:pre}
+  #hl{overflow:hidden;pointer-events:none;color:#e2e8f0}
+  #editor{resize:none;outline:none;overflow:auto;background:transparent;color:transparent;caret-color:#fff}
+  #editor::selection{background:rgba(139,92,246,.45)}
+  .t-k{color:#c084fc} .t-b{color:#67e8f9} .t-s{color:#86efac}
+  .t-c{color:#64748b;font-style:italic} .t-n{color:#fbbf24} .t-f{color:#60a5fa}
+
+  #results{margin-top:16px}
+  .res{padding:12px 14px;border-radius:12px;margin-bottom:10px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15)}
+  .res.ok{border-color:var(--ok)} .res.bad{border-color:var(--bad)}
+  .res h4{margin:0 0 8px;font-size:14px}
+  .res.ok h4{color:var(--ok)} .res.bad h4{color:var(--bad)}
+  .res .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .res .err{color:var(--bad)}
+  .info{color:var(--mut);font-size:14px}
+  .actions{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:18px}
+  .hint{color:var(--mut);font-size:13px;margin-left:8px}
+
+  @media(max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside.side{position:static;max-height:none}
+    .samples,.res .cols{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<form id="examForm" method="post">
+  {% csrf_token %}
+  <div class="layout">
+
+    <!-- SOL PANEL -->
+    <aside class="side card">
+      <div class="brand">Exam<span>Guard</span></div>
+
+      <span class="lbl">Tələbə</span>
+      <div class="val">{{ request.user.get_full_name|default:request.user.username }}</div>
+      <span class="lbl">İmtahan</span>
+      <div class="val">{{ exam.title }}</div>
+
+      <div class="timer" id="timerBox"><small>Qalan vaxt</small><b id="timer">--:--</b></div>
+
+      <div class="total"><span>Toplanan bal</span><b id="totalScore">0</b></div>
+
+      <span class="lbl">Tapşırıqlar</span>
+      <ul class="tasks">
+        {% for task in tasks %}
+          <li class="st-item" id="st{{ task.id }}" data-id="{{ task.id }}"
+              data-points="{{ task.points|stringformat:'f' }}"
+              data-score="{% if task.sub %}{{ task.sub.score|stringformat:'f' }}{% endif %}">
+            <span>{{ forloop.counter }}. {{ task.title|truncatechars:22 }}</span>
+            <span class="badge">—</span>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="warn"><span>Xəbərdarlıqlar</span><b id="warnCount">0</b></div>
+
+      <span class="lbl">Bildirişlər</span>
+      <ul class="notes" id="notes"></ul>
+
+      <button type="submit" class="btn finish">İmtahanı bitir</button>
+    </aside>
+
+    <!-- ƏSAS HİSSƏ -->
+    <main>
+      {% if tasks %}
+      <select id="taskSelect">
+        {% for task in tasks %}
+          <option value="{{ task.id }}">{{ forloop.counter }}. {{ task.title|truncatechars:70 }} ({{ task.points }} bal)</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+
+      {% for task in tasks %}
+        <div class="desc" data-id="{{ task.id }}" hidden>
+          <section class="card desc-card">
+            <small>TAPŞIRIQ {{ forloop.counter }} / {{ tasks|length }}</small>
+            <h2>{{ task.description }}</h2>
+            <div class="pts">{{ task.points }} bal</div>
+            {% for t in task.visible_tests %}
+              <div class="samples">
+                <div><span class="lbl">Nümunə giriş</span><div class="box"><pre>{% if t.input_data %}{{ t.input_data }}{% else %}(giriş yoxdur){% endif %}</pre></div></div>
+                <div><span class="lbl">Gözlənilən çıxış</span><div class="box"><pre>{{ t.expected_output }}</pre></div></div>
+              </div>
+            {% endfor %}
+          </section>
+        </div>
+        <textarea name="code_{{ task.id }}" id="code{{ task.id }}" hidden>{{ task.initial_code }}</textarea>
+      {% empty %}
+        <section class="card desc-card"><h2>Bu imtahana tapşırıq əlavə edilməyib.</h2></section>
+      {% endfor %}
+
+      {% if tasks %}
+        <span class="lbl">Kod (Python)</span>
+        <div class="editor-wrap">
+          <div id="gutter">1</div>
+          <div class="code-area">
+            <pre id="hl"></pre>
+            <textarea id="editor" wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div>
+            <button type="button" class="btn run" id="runBtn">▶ Nümunəni yoxla</button>
+            <span class="hint">Bal yazılmır.</span>
+          </div>
+          <button type="button" class="btn submit" id="submitBtn">Tapşırığı təhvil ver</button>
+        </div>
+
+        <div id="results"><div class="info">Nəticə burada görünəcək.</div></div>
+      {% endif %}
+    </main>
+  </div>
+</form>
+
+<script>
+  const form = document.getElementById('examForm');
+  const select = document.getElementById('taskSelect');
+  const editor = document.getElementById('editor');
+  const gutter = document.getElementById('gutter');
+  const hl = document.getElementById('hl');
+  const results = document.getElementById('results');
+  const runBtn = document.getElementById('runBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const notesEl = document.getElementById('notes');
+  const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  let current = null;
+
+  /* ---------- Bildirişlər ---------- */
+  function notify(text, kind) {
+    const li = document.createElement('li');
+    if (kind) li.className = kind;
+    const now = new Date();
+    const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    li.textContent = text;
+    const sm = document.createElement('small');
+    sm.textContent = time;
+    li.appendChild(sm);
+    notesEl.insertBefore(li, notesEl.firstChild);
+  }
+
+  /* ---------- Bal və status ---------- */
+  const scores = {};
+  document.querySelectorAll('.st-item').forEach(function (li) {
+    if (li.dataset.score !== '') scores[li.dataset.id] = parseFloat(li.dataset.score);
+  });
+
+  function fmt(n) { return String(Math.round(n * 100) / 100); }
+
+  function updateStatus(id) {
+    const li = document.getElementById('st' + id);
+    if (!li) return;
+    const badge = li.querySelector('.badge');
+    if (id in scores) {
+      badge.textContent = '✓ ' + fmt(scores[id]) + ' / ' + fmt(parseFloat(li.dataset.points));
+      li.classList.add('done');
+    }
+    let sum = 0;
+    Object.keys(scores).forEach(function (k) { sum += scores[k]; });
+    document.getElementById('totalScore').textContent = fmt(sum);
+  }
+  Object.keys(scores).forEach(updateStatus);
+
+  /* ---------- Rəngləmə (Python) ---------- */
+  const KW = new Set(['and','as','assert','break','class','continue','def','del','elif','else','except','finally',
+    'for','from','global','if','import','in','is','lambda','nonlocal','not','or','pass','raise','return','try',
+    'while','with','yield','None','True','False']);
+  const BI = new Set(['print','input','int','float','str','list','dict','set','tuple','len','range','sum','min','max',
+    'abs','sorted','enumerate','zip','map','filter','open','type','bool','round','reversed','any','all','pow','divmod']);
+  const RX = new RegExp(
+    '("""[\\s\\S]*?(?:"""|$)|\'\'\'[\\s\\S]*?(?:\'\'\'|$))' +                 // 1: üçqat dırnaq
+    '|((?:[rRbBuUfF]{1,2})?"(?:\\\\.|[^"\\\\\\n])*(?:"|$)|(?:[rRbBuUfF]{1,2})?\'(?:\\\\.|[^\'\\\\\\n])*(?:\'|$))' + // 2: sətir
+    '|(#[^\\n]*)' +                                                           // 3: şərh
+    '|(\\b\\d+(?:\\.\\d+)?\\b)' +                                             // 4: ədəd
+    '|([A-Za-z_\\u00C0-\\uFFFF][\\w\\u00C0-\\uFFFF]*)', 'g');                // 5: söz
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function highlight(src) {
+    let out = '', last = 0, prev = '', m;
+    RX.lastIndex = 0;
+    while ((m = RX.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      const t = m[0];
+      let cls = '';
+      if (m[1] || m[2]) cls = 's';
+      else if (m[3]) cls = 'c';
+      else if (m[4]) cls = 'n';
+      else {
+        if (KW.has(t)) cls = 'k';
+        else if (prev === 'def' || prev === 'class') cls = 'f';
+        else if (BI.has(t)) cls = 'b';
+        prev = t;
+      }
+      out += cls ? '<span class="t-' + cls + '">' + esc(t) + '</span>' : esc(t);
+      last = RX.lastIndex;
+      if (t.length === 0) RX.lastIndex++;
+    }
+    return out + esc(src.slice(last)) + '\n';
+  }
+
+  function updateHL() {
+    hl.innerHTML = highlight(editor.value);
+    hl.scrollTop = editor.scrollTop;
+    hl.scrollLeft = editor.scrollLeft;
+  }
+
+  function updateGutter() {
+    const lines = editor.value.split('\n').length;
+    let nums = '';
+    for (let i = 1; i <= lines; i++) nums += i + (i < lines ? '\n' : '');
+    gutter.textContent = nums;
+    gutter.scrollTop = editor.scrollTop;
+  }
+
+  function saveCurrent() {
+    if (current && editor) document.getElementById('code' + current).value = editor.value;
+  }
+
+  function refresh() { saveCurrent(); updateGutter(); updateHL(); }
+
+  /* ---------- Tapşırıq seçimi ---------- */
+  function info(text) {
+    results.innerHTML = '';
+    const d = document.createElement('div');
+    d.className = 'info';
+    d.textContent = text;
+    results.appendChild(d);
+  }
+
+  function showTask(id) {
+    saveCurrent();
+    current = id;
+    document.querySelectorAll('.desc').forEach(function (d) { d.hidden = d.dataset.id !== id; });
+    document.querySelectorAll('.st-item').forEach(function (li) {
+      li.classList.toggle('cur', li.dataset.id === id);
+    });
+    if (select) select.value = id;
+    editor.value = document.getElementById('code' + id).value;
+    updateGutter();
+    updateHL();
+    info('Nəticə burada görünəcək.');
+  }
+
+  /* ---------- Redaktor: mətn əməliyyatları ---------- */
+  function setCaret(pos) { editor.selectionStart = editor.selectionEnd = pos; }
+
+  function replaceRange(start, end, text, caret) {
+    editor.value = editor.value.slice(0, start) + text + editor.value.slice(end);
+    setCaret(caret === undefined ? start + text.length : caret);
+    refresh();
+  }
+
+  const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+  const CLOSERS = new Set([')', ']', '}', '"', "'"]);
+
+  function onKeydown(ev) {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+
+    const v = editor.value;
+    const s = editor.selectionStart, e = editor.selectionEnd;
+    const hasSel = s !== e;
+    const prevCh = s > 0 ? v[s - 1] : '';
+    const nextCh = v[e] || '';
+    const lineStart = s === 0 ? 0 : v.lastIndexOf('\n', s - 1) + 1;
+    const before = v.slice(lineStart, s);
+    const key = ev.key;
+
+    // Açan işarə: cüt yarat / seçilmişi əhatə et
+    if (key in PAIRS) {
+      if (hasSel) {
+        ev.preventDefault();
+        const inner = v.slice(s, e);
+        editor.value = v.slice(0, s) + key + inner + PAIRS[key] + v.slice(e);
+        editor.selectionStart = s + 1;
+        editor.selectionEnd = s + 1 + inner.length;
+        refresh();
+        return;
+      }
+      const isQuote = key === '"' || key === "'";
+      if (isQuote && nextCh === key) {      // artıq bağlayıcı var: üstündən keç
+        ev.preventDefault();
+        setCaret(s + 1);
+        return;
+      }
+      if (isQuote && /\w/.test(prevCh)) return;   // sözün içində (məs. don't) cüt yaratma
+      if (nextCh === '' || /[\s)\]}.,:;]/.test(nextCh)) {
+        ev.preventDefault();
+        replaceRange(s, e, key + PAIRS[key], s + 1);
+        return;
+      }
+      return;
+    }
+
+    // Bağlayan işarə: artıq varsa üstündən keç
+    if (CLOSERS.has(key) && !hasSel && nextCh === key) {
+      ev.preventDefault();
+      setCaret(s + 1);
+      return;
+    }
+
+    if (key === 'Tab') {
+      ev.preventDefault();
+      replaceRange(s, e, '    ');
+      return;
+    }
+
+    if (key === 'Enter') {
+      ev.preventDefault();
+      let indent = before.match(/^ */)[0];
+      if (before.trimEnd().endsWith(':')) indent += '    ';
+      replaceRange(s, e, '\n' + indent);
+      const lh = parseFloat(getComputedStyle(editor).lineHeight);
+      const caretLine = editor.value.slice(0, editor.selectionStart).split('\n').length;
+      const y = caretLine * lh;
+      if (y > editor.scrollTop + editor.clientHeight - lh * 2) {
+        editor.scrollTop = y - editor.clientHeight + lh * 3;
+      }
+      return;
+    }
+
+    if (key === 'Backspace' && !hasSel) {
+      // () [] {} "" '' arasındadırsa ikisini birdən sil
+      if (prevCh in PAIRS && PAIRS[prevCh] === nextCh) {
+        ev.preventDefault();
+        replaceRange(s - 1, s + 1, '', s - 1);
+        return;
+      }
+      // Yalnız boşluq olan hissədə 4 boşluğu birdən sil
+      if (before.length >= 4 && /^ +$/.test(before) && before.length % 4 === 0) {
+        ev.preventDefault();
+        replaceRange(s - 4, s, '', s - 4);
+      }
+    }
+  }
+
+  /* ---------- Nəticə kartları ---------- */
+  function field(label, text, cls) {
+    const w = document.createElement('div');
+    const l = document.createElement('span');
+    l.className = 'lbl';
+    l.textContent = label;
+    const p = document.createElement('pre');
+    if (cls) p.className = cls;
+    p.textContent = text;
+    w.appendChild(l);
+    w.appendChild(p);
+    return w;
+  }
+
+  function renderResults(list) {
+    results.innerHTML = '';
+    list.forEach(function (r, i) {
+      const box = document.createElement('div');
+      box.className = 'res ' + (r.ok ? 'ok' : 'bad');
+      const h = document.createElement('h4');
+      h.textContent = 'Nümunə ' + (i + 1) + (r.ok ? ': düzgündür ✓' : ': səhvdir ✗');
+      box.appendChild(h);
+      const cols = document.createElement('div');
+      cols.className = 'cols';
+      cols.appendChild(field('Giriş', r.input || '(giriş yoxdur)'));
+      cols.appendChild(field('Gözlənilən', r.expected));
+      cols.appendChild(r.error
+        ? field('Xəta', r.error, 'err')
+        : field('Sənin çıxışın', r.output || '(çıxış yoxdur)'));
+      box.appendChild(cols);
+      results.appendChild(box);
+    });
+  }
+
+  async function post(url, body) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify(body)
+    });
+    return resp.json();
+  }
+
+  /* ---------- Qoşulma ---------- */
+  if (select && editor) {
+    select.addEventListener('change', function () { showTask(select.value); });
+    document.querySelectorAll('.st-item').forEach(function (li) {
+      li.addEventListener('click', function () { showTask(li.dataset.id); });
+    });
+
+    editor.addEventListener('scroll', function () {
+      gutter.scrollTop = editor.scrollTop;
+      hl.scrollTop = editor.scrollTop;
+      hl.scrollLeft = editor.scrollLeft;
+    });
+    editor.addEventListener('input', refresh);
+    editor.addEventListener('keydown', onKeydown);
+
+    runBtn.addEventListener('click', async function () {
+      runBtn.disabled = true;
+      info('İşləyir...');
+      try {
+        const data = await post("{% url 'run_code' exam.id %}", { code: editor.value, task_id: current });
+        if (data.error) info(data.error); else renderResults(data.results);
+      } catch (e) {
+        info('Serverlə əlaqə alınmadı.');
+      }
+      runBtn.disabled = false;
+    });
+
+    submitBtn.addEventListener('click', async function () {
+      saveCurrent();
+      const id = current;
+      const num = select.selectedIndex + 1;
+      submitBtn.disabled = true;
+      info('Bütün testlər yoxlanır...');
+      try {
+        const data = await post("{% url 'submit_task' exam.id %}", { code: editor.value, task_id: id });
+        if (data.error) {
+          info(data.error);
+          notify(data.error, 'bad');
+        } else {
+          scores[String(data.task_id)] = data.score;
+          updateStatus(String(data.task_id));
+          const good = data.passed === data.total;
+          notify('Tapşırıq ' + num + ' təhvil verildi: ' + data.passed + '/' + data.total +
+                 ' test keçdi, ' + fmt(data.score) + ' / ' + fmt(data.max) + ' bal', good ? 'ok' : 'warn');
+          const next = select.options[select.selectedIndex + 1];
+          if (next) {
+            showTask(next.value);
+          } else {
+            info('Tapşırıq təhvil verildi. Bütün tapşırıqlara baxıb "İmtahanı bitir" düyməsinə bas.');
+            notify('Sonuncu tapşırıqdır. İmtahanı bitirə bilərsən.');
+          }
+        }
+      } catch (e) {
+        info('Serverlə əlaqə alınmadı.');
+        notify('Serverlə əlaqə alınmadı.', 'bad');
+      }
+      submitBtn.disabled = false;
+    });
+
+    showTask(select.value);
+    notify('İmtahan başladı. Uğurlar!');
+  }
+
+  /* ---------- Taymer ---------- */
+  let left = Number("{{ remaining_seconds }}");
+  const timerEl = document.getElementById('timer');
+  const timerBox = document.getElementById('timerBox');
+  let warned5 = false;
+
+  function render() {
+    const m = String(Math.floor(left / 60)).padStart(2, '0');
+    const s = String(left % 60).padStart(2, '0');
+    timerEl.textContent = m + ':' + s;
+    if (left <= 60) timerBox.classList.add('low');
+    if (left <= 300 && !warned5 && left > 60) { warned5 = true; notify('Son 5 dəqiqə qalıb.', 'warn'); }
+  }
+  render();
+
+  const t = setInterval(function () {
+    left--;
+    render();
+    if (left <= 0) {
+      clearInterval(t);
+      saveCurrent();
+      form.submit();
+    }
+  }, 1000);
+
+  form.addEventListener('submit', function (e) {
+    saveCurrent();
+    if (left > 0 && !confirm('İmtahanı bitirmək istəyirsən? Təhvil verilməyən tapşırıqlar cari kodla yoxlanacaq.')) {
+      e.preventDefault();
+    }
+  });
+</script>
+</body>
+</html>
