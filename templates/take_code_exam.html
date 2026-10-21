@@ -19,10 +19,10 @@
   .card{background:var(--glass);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(16px)}
   pre{margin:0;font-family:Consolas,"Courier New",monospace;font-size:14px;white-space:pre-wrap;word-break:break-word}
 
-  .layout{display:grid;grid-template-columns:290px 1fr;gap:20px;max-width:1280px;margin:0 auto;padding:20px}
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:20px;max-width:1400px;margin:0 auto;padding:20px}
 
   /* Sol panel */
-  aside.side{position:sticky;top:20px;align-self:start;padding:18px;max-height:calc(100vh - 40px);overflow:auto}
+  aside.side{position:sticky;top:20px;align-self:start;padding:22px;max-height:calc(100vh - 40px);overflow:auto}
   .brand{font-weight:700;font-size:18px;margin-bottom:14px}
   .brand span{color:var(--p1)}
   .lbl{display:block;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 4px}
@@ -35,8 +35,8 @@
          background:rgba(255,255,255,.06);border:1px solid var(--line)}
   .total b{color:var(--ok)}
   ul.tasks{list-style:none;margin:0 0 14px;padding:0}
-  .st-item{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:10px;
-           font-size:13px;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid transparent}
+  .st-item{display:flex;justify-content:space-between;gap:8px;padding:9px 11px;margin-bottom:6px;border-radius:10px;
+           font-size:14px;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid transparent}
   .st-item:hover{background:rgba(255,255,255,.1)}
   .st-item.cur{border-color:#c084fc;background:rgba(139,92,246,.2)}
   .st-item .badge{color:var(--mut);white-space:nowrap}
@@ -44,13 +44,13 @@
   .warn{display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;margin-bottom:12px;
         background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:14px}
   .warn b{color:var(--warn)}
-  ul.notes{list-style:none;margin:0 0 14px;padding:0;max-height:170px;overflow:auto}
-  ul.notes li{font-size:12.5px;padding:7px 9px;margin-bottom:5px;border-radius:8px;line-height:1.35;
+  ul.notes{list-style:none;margin:0 0 14px;padding:0;max-height:280px;overflow:auto}
+  ul.notes li{font-size:14px;padding:9px 11px;margin-bottom:6px;border-radius:8px;line-height:1.4;
               background:rgba(255,255,255,.05);border-left:3px solid var(--mut)}
   ul.notes li.ok{border-left-color:var(--ok)}
   ul.notes li.warn{border-left-color:var(--warn)}
   ul.notes li.bad{border-left-color:var(--bad)}
-  ul.notes small{display:block;color:var(--mut);font-size:11px}
+  ul.notes small{display:block;color:var(--mut);font-size:11px;margin-top:2px}
   .btn{border:0;color:#fff;font-weight:600;font-size:15px;padding:12px 24px;border-radius:12px;cursor:pointer;font-family:inherit}
   .btn.finish{width:100%;background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.6)}
   .btn.run{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}
@@ -129,7 +129,7 @@
           <li class="st-item" id="st{{ task.id }}" data-id="{{ task.id }}"
               data-points="{{ task.points|stringformat:'f' }}"
               data-score="{% if task.sub %}{{ task.sub.score|stringformat:'f' }}{% endif %}">
-            <span>{{ forloop.counter }}. {{ task.title|truncatechars:22 }}</span>
+            <span>{{ forloop.counter }}. {{ task.title|truncatechars:30 }}</span>
             <span class="badge">—</span>
           </li>
         {% endfor %}
@@ -252,11 +252,11 @@
   const BI = new Set(['print','input','int','float','str','list','dict','set','tuple','len','range','sum','min','max',
     'abs','sorted','enumerate','zip','map','filter','open','type','bool','round','reversed','any','all','pow','divmod']);
   const RX = new RegExp(
-    '("""[\\s\\S]*?(?:"""|$)|\'\'\'[\\s\\S]*?(?:\'\'\'|$))' +                 // 1: üçqat dırnaq
-    '|((?:[rRbBuUfF]{1,2})?"(?:\\\\.|[^"\\\\\\n])*(?:"|$)|(?:[rRbBuUfF]{1,2})?\'(?:\\\\.|[^\'\\\\\\n])*(?:\'|$))' + // 2: sətir
-    '|(#[^\\n]*)' +                                                           // 3: şərh
-    '|(\\b\\d+(?:\\.\\d+)?\\b)' +                                             // 4: ədəd
-    '|([A-Za-z_\\u00C0-\\uFFFF][\\w\\u00C0-\\uFFFF]*)', 'g');                // 5: söz
+    '("""[\\s\\S]*?(?:"""|$)|\'\'\'[\\s\\S]*?(?:\'\'\'|$))' +
+    '|((?:[rRbBuUfF]{1,2})?"(?:\\\\.|[^"\\\\\\n])*(?:"|$)|(?:[rRbBuUfF]{1,2})?\'(?:\\\\.|[^\'\\\\\\n])*(?:\'|$))' +
+    '|(#[^\\n]*)' +
+    '|(\\b\\d+(?:\\.\\d+)?\\b)' +
+    '|([A-Za-z_\\u00C0-\\uFFFF][\\w\\u00C0-\\uFFFF]*)', 'g');
 
   function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -350,7 +350,6 @@
     const before = v.slice(lineStart, s);
     const key = ev.key;
 
-    // Açan işarə: cüt yarat / seçilmişi əhatə et
     if (key in PAIRS) {
       if (hasSel) {
         ev.preventDefault();
@@ -362,12 +361,12 @@
         return;
       }
       const isQuote = key === '"' || key === "'";
-      if (isQuote && nextCh === key) {      // artıq bağlayıcı var: üstündən keç
+      if (isQuote && nextCh === key) {
         ev.preventDefault();
         setCaret(s + 1);
         return;
       }
-      if (isQuote && /\w/.test(prevCh)) return;   // sözün içində (məs. don't) cüt yaratma
+      if (isQuote && /\w/.test(prevCh)) return;
       if (nextCh === '' || /[\s)\]}.,:;]/.test(nextCh)) {
         ev.preventDefault();
         replaceRange(s, e, key + PAIRS[key], s + 1);
@@ -376,7 +375,6 @@
       return;
     }
 
-    // Bağlayan işarə: artıq varsa üstündən keç
     if (CLOSERS.has(key) && !hasSel && nextCh === key) {
       ev.preventDefault();
       setCaret(s + 1);
@@ -404,13 +402,11 @@
     }
 
     if (key === 'Backspace' && !hasSel) {
-      // () [] {} "" '' arasındadırsa ikisini birdən sil
       if (prevCh in PAIRS && PAIRS[prevCh] === nextCh) {
         ev.preventDefault();
         replaceRange(s - 1, s + 1, '', s - 1);
         return;
       }
-      // Yalnız boşluq olan hissədə 4 boşluğu birdən sil
       if (before.length >= 4 && /^ +$/.test(before) && before.length % 4 === 0) {
         ev.preventDefault();
         replaceRange(s - 4, s, '', s - 4);

@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from pypdf import PdfReader
-from core.forms import (GroupForm, AdminGroupForm, ExamForm, InstitutionForm, PDFUploadForm, TeacherForm)
+from core.forms import (GroupForm, AdminGroupForm, ExamForm, InstitutionForm, PDFUploadForm, TeacherForm, StudentForm)
 from core.models import Group, ExamSession, Answer
 from core.models.exam import Exam
 from core.models.question import Question
@@ -22,6 +22,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from core.code_runner import run_python, check_task
 from core.models import CodeSubmission
+from core.excel_import import parse_students_excel
 
 User = get_user_model()
 
@@ -341,6 +342,114 @@ def create_exam_view(request):
         'exam_form': form,
         'pdf_form': pdf_form,
     })
+
+@login_required
+def student_create_view(request):
+    if not request.user.is_admin():
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = 'student'
+            user.institution = request.user.institution
+            user.save()
+            messages.success(request, "Tələbə uğurla yaradıldı.")
+            return redirect('admin_dashboard')
+    else:
+        form = StudentForm()
+
+    return render(request, 'student_create.html', {'form': form})
+
+@login_required
+def student_import_view(request):
+    if not request.user.is_admin() or request.user.institution is None:
+        return redirect('dashboard')
+
+    institution = request.user.institution
+
+    if request.method == 'POST':
+        file = request.FILES.get('excel_file')
+
+        if file is None:
+            messages.error(request, "Fayl seçilməyib.")
+        elif not file.name.lower().endswith('.xlsx'):
+            messages.error(request, "Yalnız .xlsx formatı qəbul olunur.")
+        elif file.size > 2 * 1024 * 1024:
+            messages.error(request, "Fayl 2 MB-dan böyük ola bilməz.")
+        else:
+            group_names = set(
+                Group.objects.filter(institution=institution).values_list('name', flat=True)
+            )
+            existing = {
+                u: (r, i)
+                for u, r, i in User.objects.values_list('username', 'role', 'institution_id')
+            }
+            rows, fatal = parse_students_excel(file, group_names, existing, institution.id)
+
+            if fatal:
+                messages.error(request, fatal)
+            else:
+                valid = [r for r in rows if not r['errors']]
+                request.session['import_rows'] = valid
+                return render(request, 'student_import.html', {
+                    'rows': rows,
+                    'ok_count': len(valid),
+                    'error_count': len(rows) - len(valid),
+                    'preview': True,
+                })
+
+    return render(request, 'student_import.html', {'preview': False})
+
+
+@login_required
+def student_import_confirm_view(request):
+    if not request.user.is_admin() or request.user.institution is None:
+        return redirect('dashboard')
+    if request.method != 'POST':
+        return redirect('student_import')
+
+    institution = request.user.institution
+    rows = request.session.pop('import_rows', None)
+    if not rows:
+        messages.error(request, "Yükləmə vaxtı bitib. Faylı yenidən yüklə.")
+        return redirect('student_import')
+
+    created = added = skipped = 0
+    with transaction.atomic():
+        for row in rows:
+            group = Group.objects.filter(
+                name=row['group'], institution=institution
+            ).first()
+            if group is None:
+                skipped += 1
+                continue
+
+            user = User.objects.filter(username=row['username']).first()
+            if user is None:
+                user = User.objects.create_user(
+                    username=row['username'],
+                    password=row['password'],
+                    first_name=row['first_name'],
+                    last_name=row['last_name'],
+                    role='student',
+                    institution=institution,
+                )
+                created += 1
+            elif user.role == 'student' and user.institution_id == institution.id:
+                added += 1
+            else:
+                skipped += 1
+                continue
+
+            group.students.add(user)
+
+    messages.success(
+        request,
+        f"Yeni tələbə: {created}, mövcud tələbə qrupa əlavə olundu: {added}, keçilən: {skipped}.",
+    )
+    return redirect('admin_dashboard')
 
 @login_required
 def grade_written_view(request, exam_id, student_id):

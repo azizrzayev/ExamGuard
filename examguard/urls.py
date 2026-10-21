@@ -23,6 +23,9 @@ urlpatterns = [
     path('admin-panel/', views.admin_dashboard, name='admin_dashboard'),
     path('admin-panel/teachers/new/', views.teacher_create_view, name='teacher_create'),
     path('admin-panel/groups/', views.admin_groups_view, name='admin_groups'),
+    path('admin-panel/students/new/', views.student_create_view, name='student_create'),
+    path('admin-panel/students/import/', views.student_import_view, name='student_import'),
+    path('admin-panel/students/import/confirm/', views.student_import_confirm_view, name='student_import_confirm'),
     # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),

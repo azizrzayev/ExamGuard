@@ -116,6 +116,8 @@ class TeacherForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+class StudentForm(TeacherForm):
+    pass
 class ExamForm(forms.ModelForm):
     class Meta:
         model = Exam
