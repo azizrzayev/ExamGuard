@@ -145,7 +145,9 @@ class ExamForm(forms.ModelForm):
     def __init__(self, *args, teacher=None, **kwargs):
         super().__init__(*args, **kwargs)
         if teacher:
-            self.fields['groups'].queryset = Group.objects.filter(teacher=teacher)
+            self.fields['groups'].queryset = Group.objects.filter(
+                institution=teacher.institution
+            ).order_by('name')
     def clean_duration_minutes(self):
         duration = self.cleaned_data.get('duration_minutes')
         if duration is not None and duration <= 0:

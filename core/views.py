@@ -502,21 +502,18 @@ def teacher_groups(request):
     if not request.user.is_teacher():
         return redirect('student_dashboard')
 
-    if request.method == 'POST':
-        form = GroupForm(request.POST)
-        if form.is_valid():
-            group = form.save(commit=False)
-            group.teacher = request.user
-            group.save()
-            return redirect('teacher_groups')
+    institution = request.user.institution
+    if institution is None:
+        groups = Group.objects.none()
     else:
-        form = GroupForm()
+        groups = (
+            Group.objects.filter(institution=institution)
+            .select_related('teacher')
+            .prefetch_related('students')
+            .order_by('name')
+        )
 
-    groups = Group.objects.filter(teacher=request.user)
-    return render(request, 'teacher_groups.html', {
-        'group_form': form,
-        'groups': groups,
-    })
+    return render(request, 'teacher_groups.html', {'groups': groups})
 
 
 @login_required

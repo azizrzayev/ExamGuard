@@ -1,9 +1,23 @@
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 TIME_LIMIT = 5  # saniyə
+
+
+def _python_exe():
+    """Həqiqi Python faylını tapır (serverdə sys.executable uwsgi ola bilər)."""
+    exe = sys.executable
+    if exe and os.path.basename(exe).lower().startswith('python'):
+        return exe
+    for base in (sys.prefix, sys.exec_prefix):
+        candidate = os.path.join(base, 'bin', 'python')
+        if os.path.exists(candidate):
+            return candidate
+    return shutil.which('python3') or shutil.which('python') or 'python3'
 
 
 def run_python(code, input_data=""):
@@ -13,7 +27,7 @@ def run_python(code, input_data=""):
         file.write_text(code, encoding="utf-8")
         try:
             r = subprocess.run(
-                [sys.executable, "-I", str(file)],
+                [_python_exe(), "-I", str(file)],
                 input=input_data,
                 capture_output=True,
                 text=True,
