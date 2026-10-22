@@ -23,6 +23,12 @@ from django.views.decorators.http import require_POST
 from core.code_runner import run_python, check_task
 from core.models import CodeSubmission
 from core.excel_import import parse_students_excel
+from django.db.models import Count
+from django.utils import timezone
+from core.models import Violation
+from datetime import timedelta
+from django.utils.dateparse import parse_datetime
+from core.models import ExamEvent
 
 User = get_user_model()
 
@@ -750,16 +756,26 @@ def run_code_view(request, exam_id):
         return JsonResponse({'error': 'Kod çox uzundur.'}, status=400)
 
     results = []
-    for t in task.visible_tests():
+    passed = 0
+    tests = list(task.test_cases.all())
+    for t in tests:
         out, err = run_python(code, t.input_data)
-        results.append({
-            'input': t.input_data,
-            'expected': t.expected_output,
-            'output': out,
-            'error': err,
-            'ok': (not err and out == t.expected_output.strip()),
-        })
-    return JsonResponse({'results': results})
+        ok = (not err and out == t.expected_output.strip())
+        if ok:
+            passed += 1
+        if not t.is_hidden:
+            results.append({
+                'input': t.input_data,
+                'expected': t.expected_output,
+                'output': out,
+                'error': err,
+                'ok': ok,
+            })
+        ExamEvent.objects.create(
+        student=request.user, exam=exam, kind='run',
+        task_number=task_number(exam, task), passed=passed, total=len(tests),
+    )
+    return JsonResponse({'results': results, 'passed': passed, 'total': len(tests)})
 @login_required
 @require_POST
 def submit_task_view(request, exam_id):
@@ -797,7 +813,207 @@ def submit_task_view(request, exam_id):
         student=request.user, task=task,
         defaults={'code': code, 'passed': passed, 'total': count, 'score': earned},
     )
+    ExamEvent.objects.create(
+    student=request.user, exam=exam, kind='submit_task',
+    task_number=task_number(exam, task), passed=passed, total=count,
+    score=earned, max_score=task.points,
+    )
     return JsonResponse({
         'task_id': task.id, 'passed': passed, 'total': count,
         'score': round(earned, 2), 'max': task.points,
     })
+
+@login_required
+@require_POST
+def reset_result_view(request, exam_id, student_id):
+    if not request.user.is_teacher():
+        return redirect('dashboard')
+
+    exam = get_object_or_404(Exam, id=exam_id, created_by=request.user)
+    student = get_object_or_404(User, id=student_id)
+
+    with transaction.atomic():
+        ExamResult.objects.filter(student=student, exam=exam).delete()
+        ExamSession.objects.filter(student=student, exam=exam).delete()
+        Answer.objects.filter(student=student, question__exam=exam).delete()
+        CodeSubmission.objects.filter(student=student, task__exam=exam).delete()
+        Violation.objects.filter(student=student, exam=exam).delete()
+        ExamEvent.objects.filter(student=student, exam=exam).delete()
+
+    messages.success(
+        request,
+        f"{student.get_full_name() or student.username} üçün nəticə sıfırlandı.",
+    )
+    return redirect('exam_results', exam_id=exam.id)
+
+@login_required
+def admin_users_view(request):
+    if not request.user.is_admin() or request.user.institution is None:
+        return redirect('dashboard')
+
+    institution = request.user.institution
+
+    teachers = (
+        User.objects.filter(institution=institution, role='teacher')
+        .prefetch_related('teacher_groups')
+        .order_by('last_name', 'first_name', 'username')
+    )
+    groups = (
+        Group.objects.filter(institution=institution)
+        .select_related('teacher')
+        .annotate(student_count=Count('students'))
+        .order_by('name')
+    )
+    no_group_count = User.objects.filter(
+        institution=institution, role='student', student_groups__isnull=True
+    ).count()
+
+    return render(request, 'admin_users.html', {
+        'teachers': teachers,
+        'groups': groups,
+        'no_group_count': no_group_count,
+    })
+
+
+@login_required
+def admin_group_detail_view(request, group_id):
+    if not request.user.is_admin() or request.user.institution is None:
+        return redirect('dashboard')
+
+    group = get_object_or_404(
+        Group.objects.select_related('teacher'),
+        id=group_id, institution=request.user.institution,
+    )
+
+    if request.method == 'POST':
+        student = group.students.filter(id=request.POST.get('student_id')).first()
+        if student:
+            group.students.remove(student)
+            messages.success(
+                request,
+                f"{student.get_full_name() or student.username} qrupdan çıxarıldı.",
+            )
+        return redirect('admin_group_detail', group_id=group.id)
+
+    students = group.students.order_by('last_name', 'first_name', 'username')
+    return render(request, 'admin_group_detail.html', {
+        'group': group,
+        'students': students,
+    })
+
+VIOLATION_KINDS = {'tab_hidden', 'window_blur', 'paste'}
+
+
+@login_required
+@require_POST
+def exam_violation_view(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+
+    if request.user.role != 'student' \
+            or ExamResult.objects.filter(student=request.user, exam=exam).exists() \
+            or not exam.is_open(grace_seconds=30):
+        return JsonResponse({'ignored': True})
+
+    try:
+        kind = json.loads(request.body).get('kind')
+    except ValueError:
+        return JsonResponse({'error': 'Səhv sorğu.'}, status=400)
+    if kind not in VIOLATION_KINDS:
+        return JsonResponse({'error': 'Səhv növ.'}, status=400)
+
+    # 3 saniyə ərzində təkrarlananları (blur + tab dəyişmə eyni anda) bir say
+    last = Violation.objects.filter(student=request.user, exam=exam).order_by('-created_at').first()
+    if last is None or (timezone.now() - last.created_at).total_seconds() >= 1:
+        Violation.objects.create(student=request.user, exam=exam, kind=kind)
+
+    count = Violation.objects.filter(student=request.user, exam=exam).count()
+    limit = getattr(exam, 'max_warnings', 3) or 3
+    return JsonResponse({'count': count, 'max': limit, 'removed': count >= limit})
+
+KIND_LABELS = {
+    'tab_hidden': 'başqa taba keçdi',
+    'window_blur': 'imtahan pəncərəsindən çıxdı',
+    'paste': 'mətn yapışdırdı',
+}
+
+
+@login_required
+def teacher_live_view(request):
+    if not request.user.is_teacher():
+        return redirect('dashboard')
+    return render(request, 'teacher_live.html')
+
+
+@login_required
+def teacher_live_feed_view(request):
+    if not request.user.is_teacher():
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    me = request.user
+    now = timezone.now()
+    since = parse_datetime(request.GET.get('since', '') or '') or (now - timedelta(hours=3))
+    if timezone.is_naive(since):
+        since = timezone.make_aware(since)
+
+    def name(u):
+        return u.get_full_name() or u.username
+
+    events = []
+    for s in ExamSession.objects.filter(
+            exam__created_by=me, started_at__gt=since).select_related('student', 'exam'):
+        events.append({'t': s.started_at, 'kind': 'entered', 'student': name(s.student),
+                       'exam': s.exam.title, 'detail': 'imtahana girdi'})
+
+    for v in Violation.objects.filter(
+            exam__created_by=me, created_at__gt=since).select_related('student', 'exam'):
+        events.append({'t': v.created_at, 'kind': 'warning', 'student': name(v.student),
+                       'exam': v.exam.title, 'detail': KIND_LABELS.get(v.kind, v.kind)})
+
+    for r in ExamResult.objects.filter(
+            exam__created_by=me, submitted_at__gt=since).select_related('student', 'exam'):
+        events.append({'t': r.submitted_at, 'kind': 'submitted', 'student': name(r.student),
+                       'exam': r.exam.title, 'detail': f'imtahanı bitirdi ({r.score:g} / {r.total:g})'})
+
+    for ev in ExamEvent.objects.filter(
+            exam__created_by=me, created_at__gt=since).select_related('student', 'exam'):
+        if ev.kind == 'run':
+            kind = 'run'
+            detail = f'Tapşırıq {ev.task_number}: nümunəni yoxladı, {ev.passed}/{ev.total} test keçdi'
+        else:
+            kind = 'task'
+            detail = (f'Tapşırıq {ev.task_number}: təhvil verdi, {ev.passed}/{ev.total} test keçdi, '
+                      f'{ev.score:g}/{ev.max_score:g} bal')
+        events.append({'t': ev.created_at, 'kind': kind, 'student': name(ev.student),
+                       'exam': ev.exam.title, 'detail': detail})
+
+    events.sort(key=lambda e: e['t'])
+    for e in events:
+        e['t'] = e['t'].isoformat()
+
+    # Hazırda imtahan verənlər
+    finished = set(ExamResult.objects.filter(exam__created_by=me)
+                   .values_list('student_id', 'exam_id'))
+    warn_counts = {
+        (st, ex): c
+        for st, ex, c in Violation.objects.filter(exam__created_by=me)
+        .values_list('student_id', 'exam_id').annotate(c=Count('id'))
+    }
+    active = []
+    for s in ExamSession.objects.filter(
+            exam__created_by=me, started_at__gte=now - timedelta(hours=12)
+    ).select_related('student', 'exam'):
+        key = (s.student_id, s.exam_id)
+        if key in finished or not s.exam.is_open(grace_seconds=30):
+            continue
+        active.append({
+            'student': name(s.student), 'exam': s.exam.title,
+            'warnings': warn_counts.get(key, 0),
+            'max': getattr(s.exam, 'max_warnings', 3) or 3,
+        })
+    active.sort(key=lambda a: -a['warnings'])
+
+    return JsonResponse({'now': now.isoformat(), 'events': events, 'active': active})
+
+def task_number(exam, task):
+    ids = list(exam.code_tasks.order_by('id').values_list('id', flat=True))
+    return ids.index(task.id) + 1

@@ -29,9 +29,16 @@
                     <td>{{ r.score }} / {{ r.total }}</td>
                     <td>{% widthratio r.score r.total 100 %}%</td>
                     <td>{{ r.submitted_at|date:"d.m.Y H:i" }}</td>
-                    <td>
+                    <td class="text-end">
                         <a href="{% url 'grade_written' exam.id r.student.id %}"
                            class="btn btn-sm btn-outline-light rounded-pill">Yoxla</a>
+
+                        <form method="post" action="{% url 'reset_result' exam.id r.student.id %}"
+                              class="d-inline"
+                              onsubmit="return confirm('Bu tələbənin nəticəsi və cavabları silinəcək, imtahana yenidən girə biləcək. Davam edək?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">Sıfırla</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

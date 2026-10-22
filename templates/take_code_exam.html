@@ -10,6 +10,7 @@
     --txt:#f8fafc; --mut:#94a3b8; --p1:#ec4899; --p2:#8b5cf6; --ok:#34d399; --bad:#f87171; --warn:#fbbf24;
   }
   *{box-sizing:border-box}
+
   body{
     margin:0; min-height:100vh; color:var(--txt); font-family:Segoe UI,Arial,sans-serif;
     background:radial-gradient(circle at top left,#312e81 0%,transparent 35%),
@@ -428,8 +429,16 @@
     return w;
   }
 
-  function renderResults(list) {
+    function renderResults(list, passed, total) {
     results.innerHTML = '';
+
+    const sum = document.createElement('div');
+    sum.className = 'res ' + (passed === total ? 'ok' : 'bad');
+    const sh = document.createElement('h4');
+    sh.textContent = 'Keçən testlər: ' + passed + ' / ' + total + (passed === total ? ' ✓' : '');
+    sum.appendChild(sh);
+    results.appendChild(sum);
+
     list.forEach(function (r, i) {
       const box = document.createElement('div');
       box.className = 'res ' + (r.ok ? 'ok' : 'bad');
@@ -477,7 +486,7 @@
       info('İşləyir...');
       try {
         const data = await post("{% url 'run_code' exam.id %}", { code: editor.value, task_id: current });
-        if (data.error) info(data.error); else renderResults(data.results);
+        if (data.error) info(data.error); else renderResults(data.results, data.passed, data.total);
       } catch (e) {
         info('Serverlə əlaqə alınmadı.');
       }
@@ -552,5 +561,6 @@
     }
   });
 </script>
+{% include "_proctor.html" %}
 </body>
 </html>

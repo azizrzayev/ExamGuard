@@ -283,6 +283,7 @@ label{
         </a>
         <a href="{% url 'student_create' %}" class="{% if current == 'student_create' %}on{% endif %}">＋ Yeni tələbə</a>
         <a href="{% url 'student_import' %}" class="{% if current == 'student_import' %}on{% endif %}">Excel ilə tələbə</a>
+        <a href="{% url 'admin_users' %}" class="{% if current == 'admin_users' %}on{% endif %}">Müəllim və qruplar</a>
         <a class="{% if current == 'admin_groups' %}on{% endif %}"
    href="{% url 'admin_groups' %}">
     ◉ Qruplar

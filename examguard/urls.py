@@ -26,6 +26,8 @@ urlpatterns = [
     path('admin-panel/students/new/', views.student_create_view, name='student_create'),
     path('admin-panel/students/import/', views.student_import_view, name='student_import'),
     path('admin-panel/students/import/confirm/', views.student_import_confirm_view, name='student_import_confirm'),
+    path('admin-panel/groups/<int:group_id>/', views.admin_group_detail_view, name='admin_group_detail'),
+    path('admin-panel/users/', views.admin_users_view, name='admin_users'),
     # İmtahan əməliyyatları  
     path('teacher/exam/delete/<int:exam_id>/', views.delete_exam_view, name='delete_exam'),
     path('teacher/exam/<int:exam_id>/add-question/', views.add_question_view, name='add_question'),
@@ -37,4 +39,8 @@ urlpatterns = [
     path('teacher/exams/<int:exam_id>/grade/<int:student_id>/', views.grade_written_view, name='grade_written'),
     path('student/exam/<int:exam_id>/run/', views.run_code_view, name='run_code'),
     path('student/exam/<int:exam_id>/submit-task/', views.submit_task_view, name='submit_task'),
+    path('teacher/exams/<int:exam_id>/reset/<int:student_id>/', views.reset_result_view, name='reset_result'),
+    path('student/exam/<int:exam_id>/violation/', views.exam_violation_view, name='exam_violation'),
+    path('teacher/live/', views.teacher_live_view, name='teacher_live'),
+    path('teacher/live/feed/', views.teacher_live_feed_view, name='teacher_live_feed'),
 ]
