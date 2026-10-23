@@ -1,3 +1,4 @@
+{% load task_format %}
 <!DOCTYPE html>
 <html lang="az">
 <head>
@@ -21,7 +22,27 @@
   pre{margin:0;font-family:Consolas,"Courier New",monospace;font-size:14px;white-space:pre-wrap;word-break:break-word}
 
   .layout{display:grid;grid-template-columns:380px 1fr;gap:20px;max-width:1400px;margin:0 auto;padding:20px}
-
+.task-desc code {
+  background: rgba(255,255,255,0.12);
+  color: #7ee0ff;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.task-code {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 12px 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+.task-code code {
+  background: none;
+  color: #e6edf3;
+  padding: 0;
+}
+.task-h { margin: 18px 0 8px; color: #fff; }
+.task-list li { margin-bottom: 6px; }
   /* Sol panel */
   aside.side{position:sticky;top:20px;align-self:start;padding:22px;max-height:calc(100vh - 40px);overflow:auto}
   .brand{font-weight:700;font-size:18px;margin-bottom:14px}
@@ -158,11 +179,11 @@
         <div class="desc" data-id="{{ task.id }}" hidden>
           <section class="card desc-card">
             <small>TAPŞIRIQ {{ forloop.counter }} / {{ tasks|length }}</small>
-            <h2>{{ task.description }}</h2>
+            <div class="task-desc">{{ task.description|format_task }}</div>
             <div class="pts">{{ task.points }} bal</div>
             {% for t in task.visible_tests %}
               <div class="samples">
-                <div><span class="lbl">Nümunə giriş</span><div class="box"><pre>{% if t.input_data %}{{ t.input_data }}{% else %}(giriş yoxdur){% endif %}</pre></div></div>
+                <div><span class="lbl">Nümunə giriş</span><div class="box"><pre>{% if t.input_data %}{{ t.input_data|cut:"#HARNESS" }}{% else %}(giriş yoxdur){% endif %}</pre></div></div>
                 <div><span class="lbl">Gözlənilən çıxış</span><div class="box"><pre>{{ t.expected_output }}</pre></div></div>
               </div>
             {% endfor %}
