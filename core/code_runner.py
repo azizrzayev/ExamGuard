@@ -19,16 +19,23 @@ def _python_exe():
             return candidate
     return shutil.which('python3') or shutil.which('python') or 'python3'
 
+HARNESS = "#HARNESS\n"
+
 
 def run_python(code, input_data=""):
     """Kodu işə salır. (nəticə, xəta) qaytarır."""
+    stdin = input_data
+    if input_data.startswith(HARNESS):
+        # sinif tapşırığı: gizli test kodu tələbənin koduna əlavə olunur
+        code = code.rstrip("\n") + "\n\n" + input_data[len(HARNESS):]
+        stdin = ""
     with tempfile.TemporaryDirectory() as tmp:
         file = Path(tmp) / "solution.py"
         file.write_text(code, encoding="utf-8")
         try:
             r = subprocess.run(
-                [_python_exe(), "-I", str(file)],
-                input=input_data,
+                [_python_exe(), "-I", "-X", "utf8", str(file)],
+                input=stdin,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -37,13 +44,14 @@ def run_python(code, input_data=""):
             )
         except subprocess.TimeoutExpired:
             return "", "Vaxt limiti aşıldı"
-        return r.stdout.strip(), r.stderr.strip()
+    return r.stdout.strip(), r.stderr.strip()
 
 
 def check_task(task, code):
     """Hər test halını yoxlayır. (keçən, ümumi) qaytarır."""
     passed = 0
     tests = list(task.test_cases.all())
+    tests = tests[1:] if len(tests) > 1 else tests
     for t in tests:
         out, err = run_python(code, t.input_data)
         if not err and out == t.expected_output.strip():

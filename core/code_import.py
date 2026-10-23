@@ -12,7 +12,7 @@ def parse_code_tasks(text):
     def finish(t):
         if t is None:
             return
-        desc = " ".join(t['desc']).strip()
+        desc = "\n".join(t['desc']).strip()
         code = "\n".join(t['code']).strip("\n")
         if not desc:
             errors.append(f"Tapşırıq {t['number']}: mətn boşdur")
@@ -26,13 +26,12 @@ def parse_code_tasks(text):
             points = float(m.group(1).replace(',', '.'))
             desc = desc[:m.start()].strip()
         tasks.append({
-            'title': desc[:80],
+            'title': desc.split("\n")[0][:80],
             'description': desc,
             'points': points,
             'reference_code': code,
             'starter_code': "\n".join(t['starter']).strip("\n"),
             'inputs': t['inputs'] or [""],
-            
         })
 
     for raw in text.split("\n"):
@@ -57,8 +56,14 @@ def parse_code_tasks(text):
         if low in ('başlanğıc:', 'baslangic:', 'başlanğıç:'):
             mode = 'starter'
             continue
+
         if low == 'kod:':
             mode = 'code'
+            continue
+
+        if low == 'test:':
+            cur['inputs'].append("#HARNESS\n")
+            mode = 'test'
             continue
 
         if low.startswith('giriş:') or low.startswith('giris:'):
@@ -68,10 +73,18 @@ def parse_code_tasks(text):
             continue
 
         if mode == 'text':
-            if stripped:
-                cur['desc'].append(stripped)
+            if stripped == '§':
+                cur['desc'].append("")
+            elif stripped.startswith('~ '):
+                cur['desc'][-1] += " " + stripped[2:]
+            elif stripped:
+                cur['desc'].append(line)
+            else:
+                cur['desc'].append("")
         elif mode == 'code':
             cur['code'].append(line)
+        elif mode == 'test':
+            cur['inputs'][-1] += line + "\n"
         elif mode == 'starter':
             cur['starter'].append(line)
 
